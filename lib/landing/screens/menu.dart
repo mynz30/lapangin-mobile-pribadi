@@ -1,225 +1,363 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:lapangin/landing/widgets/left_drawer.dart';
-import 'package:lapangin/authbooking/screens/login.dart';
-import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:lapangin/landing/widgets/left_drawer.dart'; 
+import 'package:lapangin/landing/widgets/card_lapangan.dart'; 
+import 'package:lapangin/landing/models/lapangan_entry.dart'; 
+import 'package:pbp_django_auth/pbp_django_auth.dart'; 
 import 'package:provider/provider.dart';
+import 'package:lapangin/config.dart';
+
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key});
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  List<LapanganEntry> _lapangans = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+
+  final String apiUrl = "http://localhost:8000/api/booking/"; 
+  final String _baseServerUrl = "http://localhost:8000"; 
+
+  String _userName = "User"; 
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setUserName(); // Panggil fungsi untuk mengatur nama
+      fetchLapanganData();
+    });
+  }
+
+  void _setUserName() {
+    final request = context.read<CookieRequest>();
+    final userData = request.jsonData;
+
+    print("--- Data User Tersimpan di CookieRequest (lapangin) ---");
+    print(userData);
+    print("-------------------------------------------------------");
+
+    const potentialKeys = ['username', 'first_name', 'name', 'fullname'];
+
+    String? foundName;
+
+    for (var key in potentialKeys) {
+      if (userData.containsKey(key) && userData[key] != null) {
+        final nameCandidate = userData[key].toString();
+        if (nameCandidate.isNotEmpty) {
+          foundName = nameCandidate;
+          print("Ditemukan nama pengguna dengan kunci: $key. Nilai: $foundName");
+          break;
+        }
+      }
+    }
+    
+    if (foundName != null) {
+      setState(() {
+        _userName = foundName!;
+      });
+    }
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return "U"; // Default 'U' untuk 'User'
+    final parts = name.trim().split(' ');
+    String initials = parts.first[0].toUpperCase();
+    if (parts.length > 1) {
+      initials += parts.last[0].toUpperCase();
+    }
+    return initials;
+  }
+  // ---------------------------------------------
 
 
+  Future<void> fetchLapanganData() async {
+    final request = context.read<CookieRequest>();
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
 
-class MyHomePage extends StatelessWidget {
-    MyHomePage({super.key});
+    try {
+      final response = await request.get(apiUrl);
+      
+      List<LapanganEntry> fetchedLapangans = [];
+      
+      if (response is List) {
+        for (var item in response) {
+          
+          // *** PERUBAHAN KRUSIAL: Membaca properti langsung dari 'item' ***
+          final id = item['id'];
+          final name = item['name'];
+          final typeString = item['type'];
+          final location = item['location'];
+          final price = item['price'];
+          final rating = item['rating'];
+          final reviewCount = item['review_count'];
+          String imageUrl = item['image'] ?? ""; // Ambil gambar
+          if (id != null && name != null && typeString != null) { 
+            if (!imageUrl.startsWith('http') && imageUrl.isNotEmpty) {
+              if (imageUrl.startsWith('/')) {
+                imageUrl = _baseServerUrl + imageUrl;
+              } else {
+                imageUrl = '$_baseServerUrl/$imageUrl';
+              }
+            }
+            
+            fetchedLapangans.add(LapanganEntry(
+              id: id,
+              name: name,
+              type: typeValues.map[typeString]!, // Ganti sementara karena typeValues tidak ada
+              location: location ?? "N/A",
+              price: price ?? 0,
+              rating: (rating is num) ? rating.toDouble() : 0.0,
+              reviewCount: reviewCount ?? 0,
+              image: imageUrl, 
+            ));
 
-    final String nama = "D06"; //nama
-    final String npm = "xxxxxxxxxx"; //npm
-    final String kelas = "D"; //kelas
+          } else {
+            print('Peringatan: Item data tidak valid (ID, Name, Type hilang, atau Tipe tidak dikenali): $item');
+          }
+        }
 
-    final List<ItemHomepage> items = [
-        ItemHomepage("See Football News", Icons.newspaper),
-        ItemHomepage("Add News", Icons.add),
-        ItemHomepage("Logout", Icons.logout),
-      ];
+        setState(() {
+          _lapangans = fetchedLapangans;
+          _isLoading = false;
+        });
+      } else {
+        throw Exception("API response is not a valid list format. Did you return a single object instead of a list?");
+      }
 
-    @override
-    Widget build(BuildContext context) {
-    // Scaffold menyediakan struktur dasar halaman dengan AppBar dan body.
-    return Scaffold(
-      // AppBar adalah bagian atas halaman yang menampilkan judul.
-      appBar: AppBar(
-        // Judul aplikasi "Football News" dengan teks putih dan tebal.
-        title: const Text(
-          'Football News',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        // Warna latar belakang AppBar diambil dari skema warna tema aplikasi.
-        backgroundColor: Theme.of(context).colorScheme.primary,
+
+    } catch (e) {
+      String errorDetail = e.toString().contains('FormatException') 
+          ? 'Respons bukan JSON (mungkin HTML/halaman login/404). Cek URL Django.'
+          : e.toString();
+          
+      setState(() {
+        _errorMessage = 'Gagal mengambil data: $errorDetail. Pastikan URL server ($_baseServerUrl) dan server Django aktif.';
+        _isLoading = false;
+      });
+      print('Error fetching data: $e'); // Log error untuk debugging
+    }
+  }
+
+  Widget _buildFilterChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.black54),
+        borderRadius: BorderRadius.circular(20),
       ),
-      drawer: LeftDrawer(),
-      // Body halaman dengan padding di sekelilingnya.
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        // Menyusun widget secara vertikal dalam sebuah kolom.
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.keyboard_arrow_down, size: 16),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String firstName = _userName.split(' ').first;
+    
+    return Scaffold(
+      backgroundColor: Colors.white, 
+      
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0, 
+        iconTheme: const IconThemeData(color: Colors.black), 
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.end, // Konten rata kanan
           children: [
-            // Row untuk menampilkan 3 InfoCard secara horizontal.
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                InfoCard(title: 'NPM', content: npm),
-                InfoCard(title: 'Name', content: nama),
-                InfoCard(title: 'Class', content: kelas),
+                Text(
+                  "Hi, $firstName!",
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
               ],
             ),
-
-            // Memberikan jarak vertikal 16 unit.
-            const SizedBox(height: 16.0),
-
-            // Menempatkan widget berikutnya di tengah halaman.
-            Center(
-              child: Column(
-                // Menyusun teks dan grid item secara vertikal.
-
-                children: [
-                  // Menampilkan teks sambutan dengan gaya tebal dan ukuran 18.
-                  const Padding(
-                    padding: EdgeInsets.only(top: 16.0),
-                    child: Text(
-                      'Selamat datang di Football News',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18.0,
-                      ),
-                    ),
-                  ),
-
-                  // Grid untuk menampilkan ItemCard dalam bentuk grid 3 kolom.
-                  GridView.count(
-                    primary: true,
-                    padding: const EdgeInsets.all(20),
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    crossAxisCount: 3,
-                    // Agar grid menyesuaikan tinggi kontennya.
-                    shrinkWrap: true,
-
-                    // Menampilkan ItemCard untuk setiap item dalam list items.
-                    children: items.map((ItemHomepage item) {
-                      return ItemCard(item);
-                    }).toList(),
-                  ),
-                ],
+            const SizedBox(width: 12),
+            CircleAvatar(
+              radius: 20, 
+              backgroundColor: const Color(0xFF6B8E23),
+              child: Text(
+                _getInitials(_userName),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ),
           ],
         ),
       ),
-    );
-    }
-}
+      
+      drawer: const LeftDrawer(),
 
-
-class InfoCard extends StatelessWidget {
-  // Kartu informasi yang menampilkan title dan content.
-
-  final String title;  // Judul kartu.
-  final String content;  // Isi kartu.
-
-  const InfoCard({super.key, required this.title, required this.content});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      // Membuat kotak kartu dengan bayangan dibawahnya.
-      elevation: 2.0,
-      child: Container(
-        // Mengatur ukuran dan jarak di dalam kartu.
-        width: MediaQuery.of(context).size.width / 3.5, // menyesuaikan dengan lebar device yang digunakan.
-        padding: const EdgeInsets.all(16.0),
-        // Menyusun title dan content secara vertikal.
-        child: Column(
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8.0),
-            Text(content),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class ItemCard extends StatelessWidget {
-  // Menampilkan kartu dengan ikon dan nama.
-  final ItemHomepage item; 
-  const ItemCard(this.item, {super.key}); 
-
-  @override
-  Widget build(BuildContext context) {
-    final request = context.watch<CookieRequest>();
-    return Material(
-      // Menentukan warna latar belakang dari tema aplikasi.
-      color: Theme.of(context).colorScheme.secondary,
-      // Membuat sudut kartu melengkung.
-      borderRadius: BorderRadius.circular(12),
-
-      child: InkWell(
-        // Aksi ketika kartu ditekan.
-        // Area responsif terhadap sentuhan
-        onTap: () async {
-          // Memunculkan SnackBar ketika diklik
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(
-                content: Text("Kamu telah menekan tombol ${item.name}!")));
-
-          // Navigate ke route yang sesuai (tergantung jenis tombol)
-          if (item.name == "Logout") {
-            // TODO: Replace the URL with your app's URL and don't forget to add a trailing slash (/)!
-            // To connect Android emulator with Django on localhost, use URL http://10.0.2.2/
-            // If you using chrome,  use URL http://localhost:8000
-            
-            final response = await request.logout(
-                "https://zibeon-jonriano-lapangin2.pbp.cs.ui.ac.id/auth/logout/");
-            String message = response["message"];
-            if (context.mounted) {
-                if (response['status']) {
-                    String uname = response["username"];
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text("$message See you again, $uname."),
-                    ));
-                    Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LoginPage()),
-                    );
-                } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text(message),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              
+              Container(
+                width: double.infinity,
+                height: 160,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  image: const DecorationImage(
+                    image: NetworkImage("https://images.unsplash.com/photo-1551958219-acbc608c6377?q=80&w=2070&auto=format&fit=crop"), 
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black38, 
+                      BlendMode.darken,
+                    ),
+                  ),
+                ),
+                child: const Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Booking Lapangan Gak\nPake Drama!",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
-                    );
-                }
-            }
-        }
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        "Cari lapangan, pilih jadwal, langsung main!",
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
-        },
-        // Container untuk menyimpan Icon dan Text
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          child: Center(
-            child: Column(
-              // Menyusun ikon dan teks di tengah kartu.
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  item.icon,
-                  color: Colors.white,
-                  size: 30.0,
+              const SizedBox(height: 24),
+
+              const Text(
+                "Cari Lapangan",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF6B8E23), 
                 ),
-                const Padding(padding: EdgeInsets.all(3)),
-                Text(
-                  item.name,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: "Ketikkan nama lapangan..",
+                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
                 ),
-              ],
-            ),
+              ),
+
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  _buildFilterChip("Jenis Lapangan"),
+                  const SizedBox(width: 12),
+                  _buildFilterChip("Filter Ulasan"),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              if (_isLoading)
+                const Center(child: Padding(
+                  padding: EdgeInsets.all(30.0),
+                  child: CircularProgressIndicator(),
+                ))
+              else if (_errorMessage.isNotEmpty)
+                Center(child: Padding(
+                  padding: const EdgeInsets.all(30.0),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                      const SizedBox(height: 10),
+                      Text(
+                        _errorMessage,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: fetchLapanganData,
+                        child: const Text('Coba Lagi'),
+                      ),
+                    ],
+                  ),
+                ))
+              else if (_lapangans.isEmpty)
+                const Center(child: Padding(
+                  padding: EdgeInsets.all(30.0),
+                  child: Text("Tidak ada data lapangan ditemukan."),
+                ))
+              else
+                GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2, 
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.75,
+                  ),
+                  itemCount: _lapangans.length,
+                  itemBuilder: (context, index) {
+                    return LapanganEntryCard(
+                      lapangan: _lapangans[index],
+                      onTap: () {
+                        // Aksi ketika card diklik
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Kamu memilih ${_lapangans[index].name}")),
+                        );
+                      },
+                    );
+                  },
+                ),
+              
+              const SizedBox(height: 80), 
+            ],
           ),
         ),
       ),
+      
+      
     );
   }
-
-}
-
-class ItemHomepage {
- final String name;
- final IconData icon;
-
- ItemHomepage(this.name, this.icon);
 }
