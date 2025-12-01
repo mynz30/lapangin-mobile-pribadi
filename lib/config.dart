@@ -1,6 +1,6 @@
 // lapangin/lib/config.dart
 class Config {
-  static const String baseUrl = "https://zibeon-jonriano-lapangin2.pbp.cs.ui.ac.id";
+  static const String baseUrl = "http://localhost:8000";
   static const String loginEndpoint = "/accounts/login-flutter/";
   static const String registerEndpoint = "/accounts/register-flutter/";
   static const String logoutEndpoint = "/accounts/logout-flutter/";

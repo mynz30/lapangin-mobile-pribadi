@@ -1,10 +1,12 @@
 // lapangin/lib/authbooking/screens/login.dart
 import 'package:flutter/material.dart';
+import 'package:lapangin/review/screens/review_lapangan.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:lapangin/authbooking/screens/register.dart';
 import 'package:lapangin/landing/screens/menu.dart';
 import 'package:lapangin/config.dart';
+import 'package:lapangin/review/screens/review_lapangan.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -244,7 +246,7 @@ class _LoginPageState extends State<LoginPage> {
       if (request.loggedIn && response['status'] == true) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => MyHomePage()),
+          MaterialPageRoute(builder: (context) => ReviewPage(fieldId: 5,)),
         );
 
         ScaffoldMessenger.of(context).showSnackBar(
