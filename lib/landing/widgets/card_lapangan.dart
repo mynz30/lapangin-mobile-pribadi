@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lapangin/landing/models/lapangan_entry.dart';
+import 'package:lapangin/config.dart';
 
 class LapanganEntryCard extends StatelessWidget {
   final LapanganEntry lapangan;
@@ -41,7 +42,7 @@ class LapanganEntryCard extends StatelessWidget {
                 aspectRatio: 16 / 9,
                 child: lapangan.image.isNotEmpty
                     ? Image.network(
-                        lapangan.image,
+                      "${Config.localUrl}/proxy-image/?url=${Uri.encodeComponent(lapangan.image)}",
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
@@ -116,7 +117,7 @@ class LapanganEntryCard extends StatelessWidget {
                       fontStyle: FontStyle.normal,
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
-                      color: Color.fromARGB(33, 33, 33, 1),
+                      color: Color.fromARGB(195, 33, 33, 1),
                     ),
                   ),
 

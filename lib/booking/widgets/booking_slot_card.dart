@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 
 class BookingSlotCard extends StatelessWidget {
   final BookingSlot slot;
-  final DateTime tanggal; 
+  final DateTime tanggal;
   final bool isSelected;
   final VoidCallback? onTap;
 
@@ -26,29 +26,31 @@ class BookingSlotCard extends StatelessWidget {
   // Fungsi untuk menentukan warna background berdasarkan status
   Color _getBackgroundColor() {
     if (slot.isAvailable) {
-      return isSelected ? const Color(0xFFF0F7E6) : Colors.white;
+      return isSelected
+          ? const Color.fromARGB(255, 243, 255, 244)
+          : Colors.white;
     } else if (slot.isPending) {
-      return const Color(0xFFFFF8E1); // Kuning muda
+      return const Color.fromARGB(255, 255, 252, 230); // Kuning muda
     } else {
-      return const Color(0xFFFFEBEE); // Merah muda
+      return const Color.fromARGB(255, 255, 240, 241); // Merah muda
     }
   }
 
   // Fungsi untuk menentukan warna border berdasarkan status
   Color _getBorderColor() {
     if (slot.isAvailable && isSelected) {
-      return const Color(0xFFA7BF6E);
+      return const Color(0xFF81C784);
     } else if (slot.isAvailable) {
       return Colors.grey.shade300;
     } else if (slot.isPending) {
-      return const Color(0xFFFFB300); // Kuning
+      return const Color(0xFFFFD54F); // Kuning
     } else {
-      return Colors.red.shade300;
+      return const Color(0xFFE57373); // Merah
     }
   }
 
-  // Fungsi untuk menentukan warna badge status
-  Color _getBadgeColor() {
+  // Fungsi untuk menentukan warna background badge status
+  Color _getBadgeBackgroundColor() {
     if (slot.isAvailable) {
       return const Color(0xFFE8F5E9); // Hijau muda
     } else if (slot.isPending) {
@@ -58,14 +60,14 @@ class BookingSlotCard extends StatelessWidget {
     }
   }
 
-  // Fungsi untuk menentukan warna text badge
-  Color _getBadgeTextColor() {
+  // Fungsi untuk menentukan warna text status
+  Color _getStatusTextColor() {
     if (slot.isAvailable) {
-      return const Color(0xFF4CAF50); // Hijau
+      return const Color.fromARGB(255, 81, 126, 83); // Hijau
     } else if (slot.isPending) {
-      return const Color(0xFFF57F17); // Kuning tua
+      return const Color.fromARGB(255, 187, 131, 0); // Kuning
     } else {
-      return const Color(0xFFD32F2F); // Merah
+      return const Color.fromARGB(255, 149, 75, 75); // Merah
     }
   }
 
@@ -84,81 +86,87 @@ class BookingSlotCard extends StatelessWidget {
     return GestureDetector(
       onTap: slot.isAvailable ? onTap : null,
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: _getBackgroundColor(),
           border: Border.all(
             color: _getBorderColor(),
-            width: isSelected ? 2 : 1,
+            width: isSelected ? 2.5 : 1.5,
           ),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFFA7BF6E).withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              : null,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Tanggal - FIXED: Gunakan tanggal dari slot
-            Text(
-              _formatTanggal(tanggal), // ✅ GUNAKAN TANGGAL DARI SLOT
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: slot.isAvailable 
-                    ? Colors.grey.shade600
-                    : Colors.grey.shade400,
+            // Tanggal di pojok kanan atas
+            Align(
+              alignment: Alignment.topRight,
+              child: Text(
+                _formatTanggal(tanggal),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: slot.isAvailable
+                      ? Colors.grey.shade700
+                      : Colors.grey.shade500,
+                ),
               ),
             ),
+
             const SizedBox(height: 4),
-            
+
             // Waktu
             Text(
               '${slot.jamMulai}-${slot.jamAkhir}',
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: slot.isAvailable 
-                    ? Colors.black87
-                    : Colors.grey.shade500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            
-            // Harga atau BOOKED
-            Text(
-              slot.isAvailable 
-                  ? _formatCurrency(slot.harga)
-                  : 'BOOKED',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: slot.isAvailable 
-                    ? Colors.black87
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: slot.isAvailable
+                    ? Colors.grey.shade600
                     : Colors.grey.shade400,
               ),
             ),
-            const SizedBox(height: 8),
-            
+
+            const SizedBox(height: 6),
+
+            // Harga
+            Text(
+              slot.isAvailable
+                  ? _formatCurrency(slot.harga)
+                  : _formatCurrency(slot.harga),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: slot.isAvailable ? Colors.black87 : Colors.grey.shade600,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
             // Status Badge
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
-                color: _getBadgeColor(),
+                color: _getBadgeBackgroundColor(),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                slot.status == 'AVAILABLE' ? 'Available' : slot.status,
+                slot.status == 'AVAILABLE'
+                    ? 'Available'
+                    : slot.status == 'PENDING'
+                    ? 'Pending'
+                    : 'Booked',
                 style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: _getBadgeTextColor(),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _getStatusTextColor(),
                 ),
               ),
             ),
