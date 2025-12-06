@@ -21,9 +21,9 @@ const TextStyle lightStyle = TextStyle(
 const TextStyle subheadingS9Style = TextStyle(
   color: Color(0xFFFFFFFF), // #FFF (Putih)
   fontFamily: 'Montserrat',
-  fontSize: 10,
+  fontSize: 16,
   fontStyle: FontStyle.normal,
-  fontWeight: FontWeight.w600, // Semi-Bold
+  fontWeight: FontWeight.w400, // Semi-Bold
   height: 1.2, // line-height: 120% (12px / 10px)
 );
 
@@ -48,11 +48,17 @@ class LeftDrawer extends StatelessWidget {
                     children: [
                       TextSpan(
                         text: 'Lapang',
-                        style: lightStyle.copyWith(fontSize: 20),
+                        style: lightStyle.copyWith(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       TextSpan(
                         text: '.in',
-                        style: darkHeadingStyle.copyWith(fontSize: 20),
+                        style: darkHeadingStyle.copyWith(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ],
                   ),
@@ -60,7 +66,7 @@ class LeftDrawer extends StatelessWidget {
 
                 Padding(padding: EdgeInsets.all(10)),
                 Text(
-                  'Secure your favourite sport field! only here.',
+                  'Cari lapangan, pilih jadwal, langsung main!',
                   textAlign: TextAlign.left, 
                   style: subheadingS9Style
                 ),
