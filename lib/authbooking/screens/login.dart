@@ -246,7 +246,7 @@ class _LoginPageState extends State<LoginPage> {
       if (request.loggedIn && response['status'] == true) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ReviewPage(fieldId: 5)),
+          MaterialPageRoute(builder: (context) => MyHomePage()),
         );
 
         ScaffoldMessenger.of(context).showSnackBar(
