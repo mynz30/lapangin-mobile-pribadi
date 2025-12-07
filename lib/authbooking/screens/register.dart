@@ -491,9 +491,7 @@ class _RegisterPageState extends State<RegisterPage> {
       print("🔵 Sending registration data: $requestData");
 
       final response = await request.postJson(
-        //kalo udah deploy di pws, pake yang baseUrl
-        // "${Config.baseUrl}${Config.registerEndpoint}",
-        "${Config.localUrl}${Config.registerEndpoint}",
+        "${Config.baseUrl}${Config.registerEndpoint}",
         jsonEncode(requestData),
       );
 
