@@ -1,44 +1,76 @@
 import 'package:flutter/material.dart';
-import 'package:lapangin/admin-dashboard/services/dashboard_service.dart';
-import 'booking_pending_screen.dart';
-import 'lapangan_list_screen.dart';
+import 'package:lapangin/config.dart';
+import 'package:lapangin/admin-dashboard/screens/admin_booking_pending_screen.dart';
+import 'package:lapangin/admin-dashboard/screens/admin_lapangan_list_screen.dart';
+import 'package:lapangin/authbooking/screens/login.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:provider/provider.dart';
 
-class AdminDashboardScreen extends StatefulWidget {
-  final String sessionCookie;
-  final String username;
-
-  const AdminDashboardScreen({
-    super.key,
-    required this.sessionCookie,
-    required this.username,
-  });
+class AdminHomeScreen extends StatefulWidget {
+  const AdminHomeScreen({super.key});
 
   @override
-  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  State<AdminHomeScreen> createState() => _AdminHomeScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  Map<String, dynamic>? _stats;
-  bool _isLoading = true;
+class _AdminHomeScreenState extends State<AdminHomeScreen> {
+  Map<String, dynamic>? stats;
+  bool isLoading = true;
+  String username = 'Admin';
 
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     _loadStats();
   }
 
-  Future<void> _loadStats() async {
-    setState(() => _isLoading = true);
-    try {
-      final stats = await AdminDashboardService.getDashboardStats(widget.sessionCookie);
+  void _loadUserData() {
+    final request = context.read<CookieRequest>();
+    if (request.jsonData.containsKey('username')) {
       setState(() {
-        _stats = stats;
-        _isLoading = false;
+        username = request.jsonData['username'];
       });
+    }
+  }
+
+  Future<void> _loadStats() async {
+    setState(() => isLoading = true);
+    final request = context.read<CookieRequest>();
+    try {
+      final response = await request.get(
+        "${Config.localUrl}${Config.adminDashboardStatsEndpoint}",
+        // "${Config.baseUrl}${Config.adminDashboardStatsEndpoint}", // Production
+      );
+      if (mounted) {
+        setState(() {
+          stats = response;
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
+      print("Error loading stats: $e");
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    final request = context.read<CookieRequest>();
+    try {
+      await request.logout(
+        "${Config.localUrl}${Config.logoutEndpoint}",
+        // "${Config.baseUrl}${Config.logoutEndpoint}", // Production
+      );
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Logout error: $e')),
       );
     }
   }
@@ -46,327 +78,356 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFF8DA35D),
         elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.black),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
         title: Row(
           children: [
-            const Text('Lapang.', style: TextStyle(color: Color(0xFF4F4F4F), fontWeight: FontWeight.bold)),
-            const Text('in', style: TextStyle(color: Color(0xFFA7BF6E), fontWeight: FontWeight.bold)),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.person, color: Color(0xFF8DA35D)),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              username,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         actions: [
           IconButton(
-            icon: Stack(
-              children: [
-                const Icon(Icons.notifications_outlined, color: Colors.black),
-                if (_stats != null && _stats!['pending_bookings'] > 0)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                      child: Center(
-                        child: Text(
-                          '${_stats!['pending_bookings']}',
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => BookingPendingScreen(
-                    sessionCookie: widget.sessionCookie,
-                    username: widget.username,
-                  ),
-                ),
-              );
-            },
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _loadStats,
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: const Color(0xFFA7BF6E),
-              child: Text(
-                widget.username[0].toUpperCase(),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ),
-          ),
-          Text(widget.username, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600)),
-          const SizedBox(width: 8),
         ],
       ),
-      drawer: _buildDrawer(),
-      body: _isLoading ? const Center(child: CircularProgressIndicator(color: Color(0xFFA7BF6E))) : _buildContent(),
-    );
-  }
-
-  Widget _buildDrawer() {
-    return Drawer(
-      child: Container(
-        color: const Color(0xFF5A6B4A),
-        child: Column(
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                color: Color(0xFF8DA35D),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.settings, color: Colors.white),
-                      SizedBox(width: 8),
-                      Text('Dashboard', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
-                    ],
+                  const Icon(Icons.admin_panel_settings, size: 50, color: Colors.white),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Dashboard Overview',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  Text(
+                    username,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
             ),
-            _buildMenuItem(Icons.home, 'Home', true, () => Navigator.pop(context)),
-            _buildMenuItem(Icons.sports_soccer, 'Lapangan', false, () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => LapanganListScreen(
-                    sessionCookie: widget.sessionCookie,
-                    username: widget.username,
-                  ),
-                ),
-              );
-            }),
-            _buildMenuItemWithBadge(
-              Icons.access_time,
-              'Booking Masuk',
-              _stats?['pending_bookings'] ?? 0,
-              false,
-              () {
+            ListTile(
+              leading: const Icon(Icons.home, color: Color(0xFF8DA35D)),
+              title: const Text('Dashboard'),
+              onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.pending_actions, color: Color(0xFF8DA35D)),
+              title: const Text('Booking Pending'),
+              onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => BookingPendingScreen(
-                      sessionCookie: widget.sessionCookie,
-                      username: widget.username,
-                    ),
-                  ),
+                  MaterialPageRoute(builder: (c) => const AdminBookingPendingScreen()),
                 );
               },
             ),
-            _buildMenuItem(Icons.history, 'Riwayat Transaksi', false, () {}),
-            _buildMenuItem(Icons.people, 'Komunitas', false, () {}),
+            ListTile(
+              leading: const Icon(Icons.sports_tennis, color: Color(0xFF8DA35D)),
+              title: const Text('Kelola Lapangan'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (c) => const AdminLapanganListScreen()),
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Logout', style: TextStyle(color: Colors.red)),
+              onTap: _logout,
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildMenuItem(IconData icon, String title, bool isActive, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.white),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
-      tileColor: isActive ? const Color(0xFFA7BF6E) : null,
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildMenuItemWithBadge(IconData icon, String title, int count, bool isActive, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.white),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
-      trailing: count > 0
-          ? Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(12)),
-              child: Text('$count', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-            )
-          : null,
-      tileColor: isActive ? const Color(0xFFA7BF6E) : null,
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildContent() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Dashboard Overview', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 24),
-          // Stats Cards (sesuai design)
-          _buildStatCard(
-            'Total\n100',
-            'Lapangan Terdaftar',
-            Icons.sports_soccer,
-            const Color(0xFFA7BF6E),
-            const Color(0xFFE8F5E9),
-          ),
-          const SizedBox(height: 12),
-          _buildStatCard(
-            'Pending\n${_stats?['pending_bookings'] ?? 0}',
-            'Booking Menunggu',
-            Icons.access_time,
-            Colors.orange,
-            const Color(0xFFFFF3E0),
-          ),
-          const SizedBox(height: 12),
-          _buildStatCard(
-            'Total\n${_stats?['total_komunitas'] ?? 0}',
-            'Komunitas Aktif',
-            Icons.people,
-            Colors.blue,
-            const Color(0xFFE3F2FD),
-          ),
-          const SizedBox(height: 24),
-          // Alert if pending bookings
-          if (_stats != null && _stats!['pending_bookings'] > 0)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF3E0),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber, color: Colors.orange),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Ada ${_stats!['pending_bookings']} Booking Menunggu Approval!',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
-                        const Text('Segera approve atau tolak booking untuk menghindari pembatalan otomatis.',
-                            style: TextStyle(fontSize: 12, color: Colors.orange)),
-                      ],
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF8DA35D)))
+          : RefreshIndicator(
+              color: const Color(0xFF8DA35D),
+              onRefresh: _loadStats,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Dashboard Overview',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2F2F2F),
+                      ),
                     ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
+                    const SizedBox(height: 20),
+                    
+                    _buildStatCard(
+                      'Total',
+                      stats?['total_lapangan']?.toString() ?? '100',
+                      'Lapangan Terdaftar',
+                      Icons.sports_tennis,
+                      const Color(0xFF8DA35D),
+                      () => Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => BookingPendingScreen(
-                            sessionCookie: widget.sessionCookie,
-                            username: widget.username,
+                        MaterialPageRoute(builder: (c) => const AdminLapanganListScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    _buildStatCard(
+                      'Total',
+                      stats?['booking_menunggu']?.toString() ?? '3',
+                      'Booking Menunggu',
+                      Icons.pending_actions,
+                      Colors.orange,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (c) => const AdminBookingPendingScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    _buildStatCard(
+                      'Total',
+                      stats?['komunitas_aktif']?.toString() ?? '3',
+                      'Komunitas Aktif',
+                      Icons.group,
+                      Colors.blue,
+                      null,
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    if ((stats?['booking_menunggu'] ?? 3) > 0)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.orange, width: 2),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber, color: Colors.orange, size: 40),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Ada ${stats?['booking_menunggu'] ?? 3} Booking Menunggu Approval!',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Segera approve atau tolak booking untuk menghindari pembatalan otomatis.',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (c) => const AdminBookingPendingScreen(),
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.orange,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      child: const Text('Lihat Sekarang'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    
+                    const SizedBox(height: 30),
+                    const Text(
+                      'Quick Actions',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2F2F2F),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.2,
+                      children: [
+                        _buildActionCard(
+                          'Tambah\nLapangan',
+                          Icons.add_circle,
+                          const Color(0xFF8DA35D),
+                          () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Fitur tambah lapangan belum tersedia')),
+                            );
+                          },
+                        ),
+                        _buildActionCard(
+                          'Approve\nBooking',
+                          Icons.check_circle,
+                          Colors.blue,
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (c) => const AdminBookingPendingScreen(),
+                            ),
                           ),
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                    child: const Text('Lihat Sekarang'),
+                        _buildActionCard(
+                          'Lihat\nTransaksi',
+                          Icons.receipt_long,
+                          Colors.purple,
+                          () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Fitur transaksi belum tersedia')),
+                            );
+                          },
+                        ),
+                        _buildActionCard(
+                          'Buat\nKomunitas',
+                          Icons.group_add,
+                          Colors.teal,
+                          () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Fitur komunitas belum tersedia')),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildStatCard(
+    String label,
+    String value,
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback? onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 32),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2F2F2F),
+                    ),
+                  ),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF2F2F2F),
+                    ),
                   ),
                 ],
               ),
             ),
-          const SizedBox(height: 24),
-          // Quick Actions
-          const Text('Quick Actions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildActionCard('Tambah Lapangan', Icons.add_circle, const Color(0xFFA7BF6E), () {}),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildActionCard('Approve Booking', Icons.check_circle, Colors.green, () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => BookingPendingScreen(
-                        sessionCookie: widget.sessionCookie,
-                        username: widget.username,
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildActionCard('Lihat Transaksi', Icons.receipt, Colors.blue, () {}),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildActionCard('Buat Komunitas', Icons.people, Colors.blue, () {}),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String value, String label, IconData icon, Color iconColor, Color bgColor) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: iconColor, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(value.split('\n')[0], style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                    Text(value.split('\n')[1], style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
-                TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Kelola', style: TextStyle(color: iconColor)),
-                      Icon(Icons.arrow_forward, size: 16, color: iconColor),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+            if (onTap != null)
+              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey.shade400),
+          ],
+        ),
       ),
     );
   }
@@ -374,18 +435,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade300, width: 2),
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3), width: 2),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 32),
+            Icon(icon, color: color, size: 48),
             const SizedBox(height: 8),
-            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
           ],
         ),
       ),

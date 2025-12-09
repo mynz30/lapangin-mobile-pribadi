@@ -1,10 +1,9 @@
-// lapangin/lib/authbooking/screens/login.dart
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:lapangin/authbooking/screens/register.dart';
 import 'package:lapangin/landing/screens/menu.dart';
-// import 'package:lapangin/landing/screens/menu_admin.dart'; // TODO: Import halaman admin setelah dibuat
+import 'package:lapangin/admin-dashboard/screens/admin_home_screen.dart';
 import 'package:lapangin/config.dart';
 
 class LoginPage extends StatefulWidget {
@@ -297,16 +296,11 @@ class _LoginPageState extends State<LoginPage> {
       );
     } else if (role.toUpperCase() == 'PEMILIK') {
       // Navigate ke halaman admin/pemilik
-      print("✅ Navigate to MyHomePageAdmin (PEMILIK)");
-      
-      // TODO: Ganti ini dengan halaman admin yang sudah dibuat
-      // Navigator.pushReplacement(
-      //   context,
-      //   MaterialPageRoute(builder: (context) => MyHomePageAdmin()),
-      // );
-      
-      // SEMENTARA: Tampilkan dialog placeholder
-      _showAdminPagePlaceholder(username);
+      print("✅ Navigate to AdminHomeScreen (PEMILIK)");
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AdminHomeScreen()),
+      );
     } else {
       // Fallback untuk role yang tidak dikenali
       print("⚠️ Unknown role: $role, navigate ke MyHomePage");
@@ -315,48 +309,6 @@ class _LoginPageState extends State<LoginPage> {
         MaterialPageRoute(builder: (context) => MyHomePage()),
       );
     }
-  }
-
-  // TODO: Hapus fungsi ini setelah MyHomePageAdmin dibuat
-  void _showAdminPagePlaceholder(String username) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          "Admin Page",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Welcome, $username!"),
-            const SizedBox(height: 8),
-            const Text("Role: PEMILIK (Admin)"),
-            const SizedBox(height: 16),
-            const Text(
-              "Halaman admin belum tersedia.\nSementara akan diarahkan ke halaman user.",
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => MyHomePage()),
-              );
-            },
-            child: const Text("OK"),
-          )
-        ],
-      ),
-    );
   }
 
   void _showErrorDialog(String message) {
