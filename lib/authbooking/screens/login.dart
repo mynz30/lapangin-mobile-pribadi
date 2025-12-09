@@ -1,10 +1,12 @@
+```dart
 // lapangin/lib/authbooking/screens/login.dart
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:lapangin/authbooking/screens/register.dart';
-import 'package:lapangin/landing/screens/menu.dart';
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/authbooking/screens/register.dart';
+import 'package:lapangin_mobile/landing/screens/menu.dart';
+import 'package:lapangin_mobile/config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -19,6 +21,49 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _obscurePassword = true;
+
+  Future<void> _loginUser(CookieRequest request) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final response = await request.login(
+      AppConfig.loginUrl,
+      {
+        'username': _usernameController.text,
+        'password': _passwordController.text,
+      },
+    );
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (request.loggedIn && response['status'] == true) {
+      String username = response['username'];
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('username', username);
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MyHomePage()),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Welcome, $username!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response['message']),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -227,60 +272,4 @@ class _LoginPageState extends State<LoginPage> {
   }
 
 
-  Future<void> _loginUser(CookieRequest request) async {
-    setState(() => _isLoading = true);
-
-    try {
-      final response = await request.login(
-        "${Config.baseUrl}${Config.loginEndpoint}",
-        {
-          'username': _usernameController.text,
-          'password': _passwordController.text,
-        },
-      );
-
-      setState(() => _isLoading = false);
-
-      if (request.loggedIn && response['status'] == true) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => MyHomePage()),
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Welcome, ${response['username']}!"),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        _showErrorDialog(response['message'] ?? "Login failed");
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      _showErrorDialog("Cannot connect to server: $e");
-    }
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text(
-          "Login Failed",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Text(message),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
-          )
-        ],
-      ),
-    );
-  }
 }

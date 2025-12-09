@@ -1,10 +1,10 @@
 // lapangin/lib/authbooking/screens/register.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:lapangin/authbooking/screens/login.dart';
+import 'package:lapangin_mobile/authbooking/screens/login.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/config.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});

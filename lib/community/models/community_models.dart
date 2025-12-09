@@ -1,93 +1,82 @@
-// To parse this JSON data, do
-//
-//     final community = communityFromJson(jsonString);
+// lib/community/models/community_models.dart
 
 import 'dart:convert';
 
-List<Community> communityFromJson(String str) => List<Community>.from(json.decode(str).map((x) => Community.fromJson(x)));
-
-String communityToJson(List<Community> data) => json.encode(List<dynamic>.from(data.map((x) => x.toJson())));
-
+// Model untuk Data Komunitas
 class Community {
-    String model;
-    int pk;
-    Fields fields;
+  final int pk;
+  final String name;
+  final String description;
+  final String location;
+  final String sportsType;
+  final int memberCount;
+  final int maxMember;
+  final String imageUrl;
+  final String contactPerson;
+  final String contactPhone;
+  final String createdBy;
 
-    Community({
-        required this.model,
-        required this.pk,
-        required this.fields,
-    });
+  Community({
+    required this.pk,
+    required this.name,
+    required this.description,
+    required this.location,
+    required this.sportsType,
+    required this.memberCount,
+    required this.maxMember,
+    required this.imageUrl,
+    required this.contactPerson,
+    required this.contactPhone,
+    required this.createdBy,
+  });
 
-    factory Community.fromJson(Map<String, dynamic> json) => Community(
-        model: json["model"],
-        pk: json["pk"],
-        fields: Fields.fromJson(json["fields"]),
+  // Factory method untuk membuat instance dari JSON
+  factory Community.fromJson(Map<String, dynamic> json) {
+    return Community(
+      pk: json['pk'],
+      name: json['community_name'] ?? 'Tanpa Nama', // Sesuaikan key dengan views.py
+      description: json['description'] ?? '',
+      location: json['location'] ?? '',
+      sportsType: json['sports_type'] ?? 'Lainnya',
+      memberCount: json['member_count'] ?? 0,
+      maxMember: json['max_member'] ?? 0,
+      imageUrl: json['image_url'] ?? '',
+      contactPerson: json['contact_person'] ?? '',
+      contactPhone: json['contact_phone'] ?? '',
+      createdBy: json['created_by'] ?? '',
     );
-
-    Map<String, dynamic> toJson() => {
-        "model": model,
-        "pk": pk,
-        "fields": fields.toJson(),
-    };
+  }
 }
 
-class Fields {
-    String communityName;
-    String description;
-    String location;
-    int memberCount;
-    int maxMember;
-    String contactPersonName;
-    String sportsType;
-    String contactPhone;
-    String communityImage;
-    DateTime dateAdded;
-    bool isActive;
-    int createdBy;
+// Model untuk Postingan Komunitas
+class CommunityPost {
+  final int pk;
+  final String username;
+  final int userId;
+  final String content;
+  final String? imageUrl;
+  final String createdAt;
+  final int commentsCount;
 
-    Fields({
-        required this.communityName,
-        required this.description,
-        required this.location,
-        required this.memberCount,
-        required this.maxMember,
-        required this.contactPersonName,
-        required this.sportsType,
-        required this.contactPhone,
-        required this.communityImage,
-        required this.dateAdded,
-        required this.isActive,
-        required this.createdBy,
-    });
+  CommunityPost({
+    required this.pk,
+    required this.username,
+    required this.userId,
+    required this.content,
+    this.imageUrl,
+    required this.createdAt,
+    required this.commentsCount,
+  });
 
-    factory Fields.fromJson(Map<String, dynamic> json) => Fields(
-        communityName: json["community_name"],
-        description: json["description"],
-        location: json["location"],
-        memberCount: json["member_count"],
-        maxMember: json["max_member"],
-        contactPersonName: json["contact_person_name"],
-        sportsType: json["sports_type"],
-        contactPhone: json["contact_phone"],
-        communityImage: json["community_image"],
-        dateAdded: DateTime.parse(json["date_added"]),
-        isActive: json["is_active"],
-        createdBy: json["created_by"],
+  factory CommunityPost.fromJson(Map<String, dynamic> json) {
+    return CommunityPost(
+      pk: json['pk'],
+      username: json['user']['username'] ?? 'Anonymous', // Nested JSON
+      userId: json['user']['id'] ?? 0,
+      content: json['content'] ?? '',
+      imageUrl: json['image_url'],
+      createdAt: json['created_at'] ?? '',
+      commentsCount: json['comments_count'] ?? 0,
     );
-
-    Map<String, dynamic> toJson() => {
-        "community_name": communityName,
-        "description": description,
-        "location": location,
-        "member_count": memberCount,
-        "max_member": maxMember,
-        "contact_person_name": contactPersonName,
-        "sports_type": sportsType,
-        "contact_phone": contactPhone,
-        "community_image": communityImage,
-        "date_added": "${dateAdded.year.toString().padLeft(4, '0')}-${dateAdded.month.toString().padLeft(2, '0')}-${dateAdded.day.toString().padLeft(2, '0')}",
-        "is_active": isActive,
-        "created_by": createdBy,
-    };
+  }
 }

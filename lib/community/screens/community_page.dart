@@ -1,20 +1,37 @@
+// lib/community/screens/community_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:lapangin/community/models/community_models.dart';
-import 'package:lapangin/community/widgets/community_card.dart';
-import 'package:lapangin/community/screens/community_detail_page.dart';
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/community/models/community_models.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:lapangin_mobile/community/screens/community_detail_page.dart';
+import 'package:lapangin_mobile/community/widgets/community_card.dart'; // Pastikan widget ini ada
 
 class CommunityPage extends StatefulWidget {
-  const CommunityPage({super.key});
+  const CommunityPage({Key? key}) : super(key: key);
 
   @override
-  State<CommunityPage> createState() => _CommunityPageState();
+  _CommunityPageState createState() => _CommunityPageState();
 }
 
 class _CommunityPageState extends State<CommunityPage> {
+  // State variables
   String _searchQuery = "";
+  String currentUsername = "Guest";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      currentUsername = prefs.getString('username') ?? "Guest";
+    });
+  }
   String _selectedCategory = "Jenis Olahraga";
   String _selectedLocation = "Filter Lokasi";
   
@@ -22,23 +39,19 @@ class _CommunityPageState extends State<CommunityPage> {
   final List<String> _categories = ["Jenis Olahraga", "Futsal", "Bulutangkis", "Basket", "Renang"];
   final List<String> _locations = ["Filter Lokasi", "Depok", "Jakarta", "Bogor", "Tangerang", "Bekasi"];
 
-  final String baseUrl = Config.baseUrl;
-
+  // Fungsi fetch data
   Future<List<Community>> fetchCommunities(CookieRequest request) async {
-    try {
-        final response = await request.get('$baseUrl/community/api/communities/');
-        
-        List<Community> listCommunity = [];
-        for (var d in response) {
-            if (d != null) {
-                listCommunity.add(Community.fromJson(d));
-            }
-        }
-        return listCommunity;
-    } catch (e) {
-        print("Error fetching communities: $e");
-        return [];
+    // GANTI URL SESUAI IP KOMPUTER MU (JANGAN LOCALHOST JIKA PAKAI EMULATOR)
+    // Contoh Android Emulator: http://10.0.2.2:8000/community/api/communities/
+    final response = await request.get('http://127.0.0.1:8000/community/api/communities/');
+
+    List<Community> listCommunity = [];
+    for (var d in response) {
+      if (d != null) {
+        listCommunity.add(Community.fromJson(d));
+      }
     }
+    return listCommunity;
   }
 
   @override
@@ -64,9 +77,9 @@ class _CommunityPageState extends State<CommunityPage> {
                   ),
                   Row(
                     children: [
-                      const Text(
-                        "Hi, Asep!", // Placeholder username
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      Text(
+                        "Hi, $currentUsername!", // Placeholder username
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(width: 12),
                       const CircleAvatar(
@@ -102,7 +115,7 @@ class _CommunityPageState extends State<CommunityPage> {
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [Colors.black.withValues(alpha: 0.1), Colors.black.withValues(alpha: 0.5)],
+                            colors: [Colors.black.withOpacity(0.1), Colors.black.withOpacity(0.5)],
                           ),
                         ),
                         padding: const EdgeInsets.all(16.0),
@@ -204,6 +217,11 @@ class _CommunityPageState extends State<CommunityPage> {
                              padding: EdgeInsets.all(20),
                              child: CircularProgressIndicator()
                           ));
+                        } else if (snapshot.hasError) {
+                          return Center(child: Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: SelectableText("Error: ${snapshot.error}"),
+                          ));
                         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                           return const Center(child: Padding(
                             padding: EdgeInsets.all(20.0),
@@ -213,10 +231,10 @@ class _CommunityPageState extends State<CommunityPage> {
                           List<Community> communities = snapshot.data!;
                           List<Community> filteredCommunities = communities.where((c) {
                             bool matchCategory = _selectedCategory == "Jenis Olahraga" || 
-                                                 c.fields.sportsType.toLowerCase() == _selectedCategory.toLowerCase();
+                                                 c.sportsType.toLowerCase() == _selectedCategory.toLowerCase();
                             bool matchLocation = _selectedLocation == "Filter Lokasi" ||
-                                                 c.fields.location.toLowerCase().contains(_selectedLocation.toLowerCase());
-                            bool matchSearch = c.fields.communityName.toLowerCase().contains(_searchQuery);
+                                                 c.location.toLowerCase().contains(_selectedLocation.toLowerCase());
+                            bool matchSearch = c.name.toLowerCase().contains(_searchQuery);
                             
                             return matchCategory && matchLocation && matchSearch;
                           }).toList();

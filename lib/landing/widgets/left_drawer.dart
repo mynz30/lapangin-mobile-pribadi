@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lapangin/authbooking/screens/login.dart';
-// import 'package:lapangin/landing/screens/menu.dart';
+import 'package:lapangin_mobile/authbooking/screens/login.dart';
+// import 'package:lapangin_mobile/landing/screens/menu.dart';
 
 class LeftDrawer extends StatelessWidget {
   const LeftDrawer({super.key});
