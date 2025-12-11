@@ -1,5 +1,3 @@
-// lib/community/models/community_models.dart
-
 import 'dart:convert';
 
 // Model untuk Data Komunitas
@@ -30,11 +28,10 @@ class Community {
     required this.createdBy,
   });
 
-  // Factory method untuk membuat instance dari JSON
   factory Community.fromJson(Map<String, dynamic> json) {
     return Community(
       pk: json['pk'],
-      name: json['community_name'] ?? 'Tanpa Nama', // Sesuaikan key dengan views.py
+      name: json['community_name'] ?? 'Tanpa Nama',
       description: json['description'] ?? '',
       location: json['location'] ?? '',
       sportsType: json['sports_type'] ?? 'Lainnya',
@@ -48,54 +45,13 @@ class Community {
   }
 }
 
-// Model untuk Postingan Komunitas
-class CommunityPost {
-  final int pk;
-  final String username;
-  final int userId;
-  final String content;
-  final String? imageUrl;
-  final String createdAt;
-  final int commentsCount;
-  final List<CommunityComment> comments; // Added comments list
-
-  CommunityPost({
-    required this.pk,
-    required this.username,
-    required this.userId,
-    required this.content,
-    this.imageUrl,
-    required this.createdAt,
-    required this.commentsCount,
-    required this.comments,
-  });
-
-  factory CommunityPost.fromJson(Map<String, dynamic> json) {
-    var commentsList = json['comments'] as List? ?? [];
-    List<CommunityComment> comments = commentsList.map((i) => CommunityComment.fromJson(i)).toList();
-
-    return CommunityPost(
-      pk: json['pk'],
-      username: json['user']['username'] ?? 'Anonymous', // Nested JSON
-      userId: json['user']['id'] ?? 0,
-      content: json['content'] ?? '',
-      imageUrl: json['image_url'],
-      createdAt: json['created_at'] ?? '',
-      commentsCount: json['comments_count'] ?? 0,
-      comments: comments,
-    );
-  }
-}
-
 // Model untuk Komentar
 class CommunityComment {
-  final int pk;
   final String username;
   final String content;
   final String createdAt;
 
   CommunityComment({
-    required this.pk,
     required this.username,
     required this.content,
     required this.createdAt,
@@ -103,10 +59,54 @@ class CommunityComment {
 
   factory CommunityComment.fromJson(Map<String, dynamic> json) {
     return CommunityComment(
+      // Sesuai views.py: 'username' dikirim sebagai string langsung
+      username: json['username'] ?? "Anonymous", 
+      content: json['content'] ?? "",
+      createdAt: json['created_at'] ?? "-",
+    );
+  }
+}
+
+// Model untuk Postingan Komunitas
+class CommunityPost {
+  final int pk;
+  final String username;
+  final String content;
+  final String createdAt;
+  final String? imageUrl;
+  final int commentsCount;
+  final List<CommunityComment> comments; // List untuk menampung komentar
+
+  CommunityPost({
+    required this.pk,
+    required this.username,
+    required this.content,
+    required this.createdAt,
+    this.imageUrl,
+    required this.commentsCount,
+    required this.comments,
+  });
+
+  factory CommunityPost.fromJson(Map<String, dynamic> json) {
+    return CommunityPost(
       pk: json['pk'],
-      username: json['user']['username'] ?? 'Anonymous',
+      
+      // ✅ PERUBAHAN 1: Username sekarang diambil langsung (Flat)
+      // Karena di views.py kita ubah jadi: 'username': post.user.username
+      username: json['username'] ?? 'Anonymous', 
+      
       content: json['content'] ?? '',
-      createdAt: json['created_at'] ?? '',
+      imageUrl: json['image_url'],
+      createdAt: json['created_at'] ?? "-",
+      commentsCount: json['comments_count'] ?? 0,
+      
+      // ✅ PERUBAHAN 2: Parsing List Komentar
+      // Kita membaca array 'comments' dari JSON backend
+      comments: json['comments'] != null
+          ? (json['comments'] as List)
+              .map((i) => CommunityComment.fromJson(i))
+              .toList()
+          : [],
     );
   }
 }

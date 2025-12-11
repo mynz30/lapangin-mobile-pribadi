@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
+// Pastikan path import ini sesuai dengan struktur folder projekmu
 import 'package:lapangin_mobile/community/models/community_models.dart';
 import 'package:lapangin_mobile/authbooking/screens/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,85 +20,31 @@ class CommunityDetailPage extends StatefulWidget {
 
 class _CommunityDetailPageState extends State<CommunityDetailPage> {
   
+  // State variables
   bool isJoined = false;
-  final TextEditingController _postController = TextEditingController();
+  late int currentMemberCount; // Variabel lokal untuk jumlah member (biar bisa update realtime)
   String currentUsername = "Guest";
 
-  // Fetch Posts
-  Future<List<CommunityPost>> fetchPosts(CookieRequest request) async {
-    // Endpoint: /community/api/community/<pk>/posts/
-    // Endpoint: /community/api/community/<pk>/posts/
-    final response = await request.get(
-        '${Config.localUrl}/community/api/community/${widget.community.pk}/posts/');
-
-    // Response dari backend bentuknya: { 'community_pk': ..., 'posts': [...] }
-    var postsData = response['posts']; 
-
-    List<CommunityPost> listPosts = [];
-    for (var d in postsData) {
-      if (d != null) {
-        listPosts.add(CommunityPost.fromJson(d));
-      }
-    }
-    return listPosts;
-  }
+  // Controllers
+  final TextEditingController _postController = TextEditingController();
+  // Map untuk menyimpan controller input komentar setiap post secara terpisah
+  final Map<int, TextEditingController> _commentControllers = {}; 
 
   @override
   void initState() {
     super.initState();
+    // 1. Inisialisasi jumlah member awal dari data widget
+    currentMemberCount = widget.community.memberCount;
+    
+    // 2. Load username lokal
     _loadUsername();
-    // Use addPostFrameCallback to ensure context is available for CookieRequest
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkMembershipStatus();
-    });
+    
+    // 3. Cek status membership terbaru ke server (agar sinkron)
+    _checkMembershipStatus();
   }
 
-  Future<void> _checkMembershipStatus() async {
-    final request = context.read<CookieRequest>();
-    // Assuming there's an endpoint or we check via community detail API
-    // For now, let's try to fetch community details which might include 'is_member' status
-    // Or we can try to "join" and check if it says "already member"? No, that's bad UX.
-    // Let's look at the web template. It uses `if is_member`.
-    // We might need to hit an endpoint that returns this status.
-    // Since we don't have a specific "get status" endpoint documented in the user prompt,
-    // we will check the 'fetchCommunities' list or similar.
-    // ERROR: The user prompt didn't provide a specific endpoint for checking membership.
-    // However, the web template uses `is_member` context variable.
-    // Let's assume we can fetch the community detail again to get this info or a specific status endpoint.
-    // Given the constraints, I will rely on the `join` response "already joined" or similar if we strictly follow the flow, 
-    // BUT a better way is to check `community.is_member` if the model supported it.
-    // The current model doesn't have `isMember`.
-    
-    // WORKAROUND: We will attempt to fetch posts. If we can see the "Create Post" form in the response? No.
-    // Let's assume for now default is false, and rely on the user clicking join.
-    // BUT the user specifically asked "if already registered".
-    // I will try to call a lightweight endpoint or just check shared prefs if we stored it? No.
-    
-    // Let's blindly trust the user might be joined if they can create posts?
-    // Actually, I'll add a check function that tries to access a member-only endpoint or just set it based on a new API call if possible.
-    // Since I can't invent API endpoints, I will try to use the `fetchCommunities` logic which might return membership info?
-    // No, the list doesn't have it.
-    
-    // IMPROVEMENT: I will try to verify membership by checking if the user has posted? No.
-    // API UPDATE ASSUMPTION: I will assume there is an API or I will add a method that blindly sets it to true if the user clicks join.
-    // But for "already registered", we need data from server.
-    // I will check `fetchPosts`. If the user has a "leave" button in web, the server knows.
-    // I will assume the `community_detail` endpoint exists in API? 
-    // http://127.0.0.1:8000/community/api/<pk>/
-    
-    try {
-        final response = await request.get('${Config.localUrl}/community/api/${widget.community.pk}/check-membership/');
-         if (response['is_member'] == true) {
-            setState(() {
-              isJoined = true;
-            });
-         }
-    } catch (e) {
-       // If endpoint doesn't exist, we might fail silently or the user has to re-join.
-       // Fallback: If we get a specific error on join "already member", we update state.
-    }
-  }
-  
+  // --- FUNGSI UTILITAS ---
+
   Future<void> _loadUsername() async {
     final request = context.read<CookieRequest>();
     final userData = request.jsonData;
@@ -140,115 +87,205 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
     }
     return initials;
   }
-  
-  // Fungsi Join Community
-  Future<void> joinCommunity(CookieRequest request) async {
-    final response = await request.post(
-      '${Config.localUrl}/community/api/${widget.community.pk}/join-flutter/',
-      {},
-    );
+
+  // --- FUNGSI API CALLS ---
+
+  // 1. Cek Status Member & Update Data
+  Future<void> _checkMembershipStatus() async {
+    final request = context.read<CookieRequest>();
+    // Pastikan endpoint ini sudah dibuat di urls.py Django
+    final url = '${Config.localUrl}/community/api/${widget.community.pk}/check-membership/';
     
-    if (response['status'] == 'success') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message'])),
-      );
-      setState(() {
-        isJoined = true;
-      }); 
-      // Refresh Post
-      setState(() {});
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message'] ?? "Gagal join")),
-      );
+    try {
+      final response = await request.get(url);
+      if (response['status'] == 'success') {
+        if (mounted) {
+          setState(() {
+            isJoined = response['is_joined'];
+            // Update jumlah member jika server mengirim data terbaru
+            if (response['member_count'] != null) {
+              currentMemberCount = response['member_count'];
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print("Gagal cek membership: $e");
     }
   }
 
-  // Fungsi Leave Community
-  Future<void> leaveCommunity(CookieRequest request) async {
-      final response = await request.post(
-        '${Config.localUrl}/community/api/${widget.community.pk}/leave-flutter/',
-        {},
-      );
+  // 2. Ambil Daftar Postingan
+  Future<List<CommunityPost>> fetchPosts(CookieRequest request) async {
+    try {
+      final response = await request.get(
+          '${Config.localUrl}/community/api/community/${widget.community.pk}/posts/');
 
-      if (response['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Berhasil keluar dari komunitas")),
-        );
+      var postsData = response['posts']; 
+      List<CommunityPost> listPosts = [];
+      
+      if (postsData != null) {
+        for (var d in postsData) {
+          if (d != null) {
+            listPosts.add(CommunityPost.fromJson(d));
+          }
+        }
+      }
+      return listPosts;
+    } catch (e) {
+      print("Error fetching posts: $e");
+      return [];
+    }
+  }
+
+  // 3. Join Komunitas
+  Future<void> joinCommunity(CookieRequest request) async {
+    final url = '${Config.localUrl}/community/api/${widget.community.pk}/join-flutter/';
+    
+    try {
+      final response = await request.post(url, {});
+      String message = response['message']?.toString().toLowerCase() ?? "";
+      String status = response['status']?.toString().toLowerCase() ?? "";
+
+      if (status == 'success' || message.contains('sudah terdaftar') || message.contains('already')) {
         setState(() {
-          isJoined = false;
+          isJoined = true;
+          // Tambah counter member visual jika belum terdaftar sebelumnya
+          if (!message.contains('sudah terdaftar')) {
+             currentMemberCount++; 
+          }
         });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Berhasil bergabung!"), backgroundColor: Colors.green),
+        );
+        
+        setState(() {}); // Refresh UI
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response['message'] ?? "Gagal keluar")),
+          SnackBar(content: Text(response['message'] ?? "Gagal join"), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error koneksi: $e"), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  // 4. Leave Komunitas
+  Future<void> leaveCommunity(CookieRequest request) async {
+      final url = '${Config.localUrl}/community/api/${widget.community.pk}/leave-flutter/';
+
+      try {
+        final response = await request.post(url, {});
+
+        if (response['status'] == 'success') {
+          setState(() {
+            isJoined = false;
+            // Kurangi counter member visual
+            if (currentMemberCount > 0) currentMemberCount--;
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Berhasil keluar dari komunitas"), backgroundColor: Colors.green),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(response['message'] ?? "Gagal keluar"), backgroundColor: Colors.red),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
         );
       }
   }
 
-  // Fungsi Delete Post
-  Future<void> deletePost(CookieRequest request, int postPk) async {
-    final response = await request.post(
-      '${Config.localUrl}/community/api/post/$postPk/delete-flutter/',
-      {},
-    );
-
-    if (response['status'] == 'success') {
-      setState(() {}); // Refresh posts
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Post berhasil dihapus")),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message'] ?? "Gagal menghapus post")),
-      );
-    }
-  }
-
-  // Fungsi Create Comment
-  Future<void> createComment(CookieRequest request, int postPk, String content) async {
-    if (content.isEmpty) return;
-
-    final response = await request.post(
-      '${Config.localUrl}/community/api/post/$postPk/create-comment-flutter/',
-      {'content': content},
-    );
-
-    if (response['status'] == 'success') {
-      setState(() {}); // Refresh comments
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Komentar berhasil dikirim")),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message'] ?? "Gagal mengirim komentar")),
-      );
-    }
-  }
-
-
-
-  // Fungsi Create Post
+  // 5. Buat Post Baru
   Future<void> createPost(CookieRequest request) async {
-      if (_postController.text.isEmpty) return;
+      if (_postController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text("Konten tidak boleh kosong"), backgroundColor: Colors.red),
+         );
+        return;
+      }
 
-      final response = await request.post(
-        '${Config.localUrl}/community/api/community/${widget.community.pk}/create-post-flutter/',
-        {
-          'content': _postController.text,
-        },
-      );
+      // URL FIX: api/<int:pk>/post/create-flutter/
+      final url = '${Config.localUrl}/community/api/${widget.community.pk}/post/create-flutter/';
+
+      try {
+        final response = await request.post(url, {
+            'content': _postController.text,
+        });
+
+        if (response['status'] == 'success') {
+           _postController.clear();
+           setState(() {}); // Refresh list post
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text("Post berhasil dibuat!"), backgroundColor: Colors.green),
+           );
+        } else {
+           ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(content: Text(response['message'] ?? "Gagal membuat post"), backgroundColor: Colors.red),
+           );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+        );
+      }
+  }
+
+  // 6. Hapus Post
+  Future<void> deletePost(CookieRequest request, int postPk) async {
+    final url = '${Config.localUrl}/community/api/post/$postPk/delete-flutter/';
+    
+    try {
+      final response = await request.post(url, {});
 
       if (response['status'] == 'success') {
-         _postController.clear();
-         setState(() {}); // Refresh posts
-         ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(content: Text("Post berhasil dibuat!")),
-         );
+        setState(() {}); 
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Post berhasil dihapus"), backgroundColor: Colors.green),
+        );
       } else {
-         ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(content: Text("Gagal membuat post")),
-         );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message'] ?? "Gagal menghapus post"), backgroundColor: Colors.red),
+        );
       }
+    } catch(e) {
+      // Error handling
+    }
+  }
+
+  // 7. Buat Komentar
+  Future<void> createComment(CookieRequest request, int postPk, String content) async {
+    if (content.trim().isEmpty) return;
+    
+    final url = '${Config.localUrl}/community/api/post/$postPk/comment-flutter/';
+    
+    try {
+      final response = await request.post(url, {'content': content});
+
+      if (response['status'] == 'success') {
+        // Bersihkan textfield khusus untuk post tersebut
+        _commentControllers[postPk]?.clear();
+        
+        setState(() {}); // Refresh UI agar komentar baru muncul
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Komentar berhasil dikirim"), backgroundColor: Colors.green),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message'] ?? "Gagal mengirim komentar"), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      print("Error comment: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Terjadi kesalahan koneksi"), backgroundColor: Colors.red),
+      );
+    }
   }
 
   @override
@@ -385,7 +422,8 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                       Expanded(
                         child: Column(
                           children: [
-                            _buildInfoRow(Icons.people_outline, "${widget.community.memberCount}/${widget.community.maxMember} Anggota", Colors.green),
+                            // GUNAKAN currentMemberCount AGAR UPDATE REALTIME
+                            _buildInfoRow(Icons.people_outline, "$currentMemberCount/${widget.community.maxMember} Anggota", Colors.green),
                             const SizedBox(height: 12),
                             _buildInfoRow(Icons.person_outline, widget.community.contactPerson, Colors.blue),
                           ],
@@ -394,7 +432,7 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                       Expanded(
                         child: Column(
                           children: [
-                             _buildInfoRow(Icons.calendar_today_outlined, "Dibuat : -", Colors.blue), // Date not available in simplified model yet
+                             _buildInfoRow(Icons.calendar_today_outlined, "Dibuat : -", Colors.blue),
                              const SizedBox(height: 12),
                              _buildInfoRow(Icons.phone_outlined, widget.community.contactPhone, Colors.red),
                           ],
@@ -408,33 +446,36 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
 
             // 3. Conditional Banner & Create Post
             if (isJoined) ...[
-                // Green "Joined" Banner
+                // Banner Hijau (Member)
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F8E9), // Light Green
-                    borderRadius: BorderRadius.circular(4),
-                    border: const Border(left: BorderSide(color: Color(0xFF556B2F), width: 4)),
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFC8E6C9)),
                   ),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(Icons.check_circle_outline, color: Color(0xFF556B2F)),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          "Anda adalah anggota komunitas ini",
-                          style: TextStyle(height: 1.2, fontWeight: FontWeight.bold, fontSize: 13),
-                        ),
+                      Row(
+                        children: const [
+                          Icon(Icons.check_circle_outline, color: Color(0xFF2E7D32)),
+                          SizedBox(width: 8),
+                          Text(
+                            "Anda adalah anggota komunitas ini",
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1B5E20)),
+                          ),
+                        ],
                       ),
                       SizedBox(
-                        height: 32,
+                        height: 36,
                         child: ElevatedButton(
                           onPressed: () => leaveCommunity(request),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
+                            backgroundColor: Colors.redAccent,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                            child: const Text("Keluar", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
@@ -446,7 +487,7 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                 
                 const SizedBox(height: 16),
 
-                // Create Post Card
+                // Form Buat Post Baru
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                   padding: const EdgeInsets.all(16),
@@ -467,7 +508,7 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                          controller: _postController,
                          maxLines: 4,
                          decoration: InputDecoration(
-                           hintText: "Hai",
+                           hintText: "Tulis sesuatu...",
                            hintStyle: TextStyle(color: Colors.grey[400]),
                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[300]!)),
                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[300]!)),
@@ -498,14 +539,14 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                   ),
                 )
             ] else ...[
-                // Blue "Join" Banner
+                // Banner Biru (Belum Member)
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE3F2FD), // Light Blue
-                    borderRadius: BorderRadius.circular(4),
-                    border: const Border(left: BorderSide(color: Colors.blue, width: 4)),
+                    color: const Color(0xFFE3F2FD),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
@@ -514,7 +555,7 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                       const Expanded(
                         child: Text(
                           "Bergabunglah untuk\nberpartisipasi dalam forum",
-                          style: TextStyle(height: 1.2, fontWeight: FontWeight.bold, fontSize: 13),
+                          style: TextStyle(height: 1.2, fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
                         ),
                       ),
                       ElevatedButton.icon(
@@ -531,7 +572,7 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                         icon: const Icon(Icons.person_add_alt_1, size: 16, color: Color(0xFF556B2F)),
                         label: const Text("Gabung", style: TextStyle(color: Color(0xFF556B2F), fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFC5E1A5), // Light Green
+                          backgroundColor: const Color(0xFFC5E1A5),
                           elevation: 0,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
@@ -613,7 +654,7 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                                     )
                                  ],
                                ),
-                               if (post.username == currentUsername || currentUsername == "admin") // Simple check, enhance with proper ID later
+                               if (post.username == currentUsername || currentUsername == "admin") 
                                  IconButton(
                                    icon: const Icon(Icons.delete_outline, color: Colors.red),
                                    onPressed: () => deletePost(request, post.pk),
@@ -631,10 +672,10 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                                 ),
                               ),
                            const SizedBox(height: 12),
-                           const Divider(),
                            
-                           // Comments List
+                           // --- LIST KOMENTAR ---
                            if (post.comments.isNotEmpty) ...[
+                              const Divider(),
                               ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
@@ -642,7 +683,7 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                                 itemBuilder: (context, commentIndex) {
                                   final comment = post.comments[commentIndex];
                                   return Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
@@ -651,7 +692,7 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                                           radius: 12,
                                           child: Text(
                                             _getInitials(comment.username),
-                                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black54),
                                           ),
                                         ),
                                         const SizedBox(width: 8),
@@ -675,17 +716,18 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                                   );
                                 },
                               ),
-                              const Divider(),
                            ],
 
-                           // Comment Input
+                           // --- INPUT KOMENTAR (Hanya jika join) ---
                            if (isJoined)
                              Padding(
-                               padding: const EdgeInsets.only(top: 8.0),
+                               padding: const EdgeInsets.only(top: 12.0),
                                child: Row(
                                  children: [
                                    Expanded(
                                      child: TextField(
+                                       // Gunakan controller yang unik berdasarkan post PK
+                                       controller: _commentControllers.putIfAbsent(post.pk, () => TextEditingController()),
                                        decoration: InputDecoration(
                                          hintText: "Tulis komentar...",
                                          hintStyle: const TextStyle(fontSize: 12),
@@ -698,7 +740,8 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                                    IconButton(
                                      icon: const Icon(Icons.send, color: Color(0xFF556B2F)),
                                      onPressed: () {
-                                       // Trigger logic manually if needed or rely on onSubmitted
+                                       String content = _commentControllers[post.pk]?.text ?? "";
+                                       createComment(request, post.pk, content);
                                      },
                                    )
                                  ],
