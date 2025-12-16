@@ -11,7 +11,7 @@ class LapanganEntry {
     final int id;
     final String name;
     // Menggunakan tipe enum yang didefinisikan di bawah
-    final Type type; 
+    final FieldType type; 
     final String location;
     final int price;
     final double rating;
@@ -52,16 +52,16 @@ class LapanganEntry {
     };
 }
 
-enum Type {
+enum FieldType {
     BASKET,
     BULUTANGKIS,
     FUTSAL
 }
 
 final typeValues = EnumValues({
-    "Basket": Type.BASKET,
-    "Bulutangkis": Type.BULUTANGKIS,
-    "Futsal": Type.FUTSAL
+    "Basket": FieldType.BASKET,
+    "Bulutangkis": FieldType.BULUTANGKIS,
+    "Futsal": FieldType.FUTSAL
 });
 
 class EnumValues<T> {

@@ -1,13 +1,10 @@
-// ignore: unused_import
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:lapangin/landing/widgets/left_drawer.dart'; 
-import 'package:lapangin/landing/widgets/card_lapangan.dart'; 
-import 'package:lapangin/landing/models/lapangan_entry.dart'; 
+import 'package:lapangin_mobile/landing/widgets/left_drawer.dart'; 
+import 'package:lapangin_mobile/landing/widgets/card_lapangan.dart'; 
+import 'package:lapangin_mobile/landing/models/lapangan_entry.dart'; 
 import 'package:pbp_django_auth/pbp_django_auth.dart'; 
 import 'package:provider/provider.dart';
-import 'package:lapangin/config.dart';
-import 'package:lapangin/booking/screens/booking_screen.dart'; // Import BookingScreen
+import 'package:lapangin/booking/screens/booking_screen.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -18,10 +15,18 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   List<LapanganEntry> _lapangans = [];
+  List<LapanganEntry> _filteredLapangans = [];
   bool _isLoading = true;
   String _errorMessage = '';
 
-  String _userName = "User"; 
+  final String apiUrl = "http://localhost:8000/api/booking/"; 
+  final String _baseServerUrl = "http://localhost:8000"; 
+
+  String _userName = "User";
+  
+  final TextEditingController _searchController = TextEditingController();
+  FieldType? _selectedType;
+  double? _selectedMinRating;
 
   @override
   void initState() {
@@ -30,6 +35,14 @@ class _MyHomePageState extends State<MyHomePage> {
       _setUserName();
       fetchLapanganData();
     });
+    
+    _searchController.addListener(_applyFilters);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _setUserName() {
@@ -80,120 +93,333 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     try {
-      // Gunakan Config.baseUrl dan Config.lapanganListEndpoint
-      final response = await request.get(
-        // kalo udah deploy di pws, ganti jadi baseUrl
-        // '${Config.baseUrl}${Config.lapanganListEndpoint}'
-        '${Config.localUrl}${Config.lapanganListEndpoint}'
-      );
+      final response = await request.get(apiUrl);
       
       List<LapanganEntry> fetchedLapangans = [];
       
-      if (response is Map && response['status'] == 'success') {
-        // Response dari API baru format: {status: 'success', data: [...]}
-        final dataList = response['data'] as List;
-        
-        for (var item in dataList) {
+      if (response is List) {
+        for (var item in response) {
+          
           final id = item['id'];
-          final name = item['nama_lapangan'];
-          final typeString = item['jenis_olahraga'];
-          final location = item['lokasi'];
-          final price = item['harga_per_jam'];
+          final name = item['name'];
+          final typeString = item['type'];
+          final location = item['location'];
+          final price = item['price'];
           final rating = item['rating'];
-          final reviewCount = item['jumlah_ulasan'];
-          String imageUrl = item['foto_utama'] ?? "";
+          final reviewCount = item['review_count'];
+          String imageUrl = item['image'] ?? "";
           
           if (id != null && name != null && typeString != null) { 
-            // Foto sudah full URL dari backend
-            if (imageUrl.isEmpty) {
-              imageUrl = "https://via.placeholder.com/400x300?text=No+Image";
-            }
-            
-            // Cari type dari enum, atau gunakan default
-            Type lapanganType;
-            try {
-              lapanganType = typeValues.map[typeString] ?? typeValues.map.values.first;
-            } catch (e) {
-              // Jika gagal, gunakan value pertama dari enum
-              lapanganType = typeValues.map.values.first;
-            }
             
             fetchedLapangans.add(LapanganEntry(
               id: id,
               name: name,
-              type: lapanganType,
+              type: typeValues.map[typeString]!,
               location: location ?? "N/A",
-              price: (price is num) ? price.toInt() : 0,
+              price: price ?? 0,
               rating: (rating is num) ? rating.toDouble() : 0.0,
               reviewCount: reviewCount ?? 0,
               image: imageUrl, 
             ));
           } else {
-            print('Peringatan: Item data tidak valid: $item');
+            print('Peringatan: Item data tidak valid (ID, Name, Type hilang, atau Tipe tidak dikenali): $item');
           }
         }
 
         setState(() {
           _lapangans = fetchedLapangans;
+          _filteredLapangans = fetchedLapangans;
           _isLoading = false;
         });
       } else {
-        throw Exception("API response format tidak valid");
+        throw Exception("API response is not a valid list format. Did you return a single object instead of a list?");
       }
-
     } catch (e) {
       String errorDetail = e.toString().contains('FormatException') 
           ? 'Respons bukan JSON (mungkin HTML/halaman login/404). Cek URL Django.'
           : e.toString();
           
       setState(() {
-        _errorMessage = 'Gagal mengambil data: $errorDetail. Pastikan server Django aktif.';
+        _errorMessage = 'Gagal mengambil data: $errorDetail. Pastikan URL server ($_baseServerUrl) dan server Django aktif.';
         _isLoading = false;
       });
       print('Error fetching data: $e');
     }
   }
 
-  // Fungsi untuk navigasi ke BookingScreen
-  void _navigateToBooking(LapanganEntry lapangan) {
-    final request = context.read<CookieRequest>();
-    
-    // Ambil session cookie dari CookieRequest
-    String sessionCookie = '';
-    if (request.cookies.isNotEmpty) {
-      sessionCookie = request.cookies.entries
-          .map((e) => '${e.key}=${e.value}')
-          .join('; ');
-    }
+  void _applyFilters() {
+    setState(() {
+      _filteredLapangans = _lapangans.where((lapangan) {
+        final matchesSearch = lapangan.name
+            .toLowerCase()
+            .contains(_searchController.text.toLowerCase());
+        
+        final matchesType = _selectedType == null || lapangan.type == _selectedType;
+        
+        final matchesRating = _selectedMinRating == null || lapangan.rating >= _selectedMinRating!;
+        
+        return matchesSearch && matchesType && matchesRating;
+      }).toList();
+    });
+  }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BookingScreen(
-          lapanganId: lapangan.id,
-          sessionCookie: sessionCookie,
-          username: _userName,
-        ),
-      ),
+  void _showTypeFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Pilih Jenis Lapangan'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Semua Jenis'),
+                leading: Radio<FieldType?>(
+                  value: null,
+                  groupValue: _selectedType,
+                  onChanged: (FieldType? value) {
+                    setState(() {
+                      _selectedType = value;
+                      _applyFilters();
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Text('Futsal'),
+                leading: Radio<FieldType?>(
+                  value: FieldType.FUTSAL,
+                  groupValue: _selectedType,
+                  onChanged: (FieldType? value) {
+                    setState(() {
+                      _selectedType = value;
+                      _applyFilters();
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Text('Basket'),
+                leading: Radio<FieldType?>(
+                  value: FieldType.BASKET,
+                  groupValue: _selectedType,
+                  onChanged: (FieldType? value) {
+                    setState(() {
+                      _selectedType = value;
+                      _applyFilters();
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Text('Bulutangkis'),
+                leading: Radio<FieldType?>(
+                  value: FieldType.BULUTANGKIS,
+                  groupValue: _selectedType,
+                  onChanged: (FieldType? value) {
+                    setState(() {
+                      _selectedType = value;
+                      _applyFilters();
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildFilterChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black54),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+  void _showRatingFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Filter Berdasarkan Rating'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Semua Rating'),
+                leading: Radio<double?>(
+                  value: null,
+                  groupValue: _selectedMinRating,
+                  onChanged: (double? value) {
+                    setState(() {
+                      _selectedMinRating = value;
+                      _applyFilters();
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Row(
+                  children: [
+                    Icon(Icons.star, color: Color(0xFFFFC107), size: 18),
+                    SizedBox(width: 4),
+                    Text('4.5 ke atas'),
+                  ],
+                ),
+                leading: Radio<double?>(
+                  value: 4.5,
+                  groupValue: _selectedMinRating,
+                  onChanged: (double? value) {
+                    setState(() {
+                      _selectedMinRating = value;
+                      _applyFilters();
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Row(
+                  children: [
+                    Icon(Icons.star, color: Color(0xFFFFC107), size: 18),
+                    SizedBox(width: 4),
+                    Text('4.0 ke atas'),
+                  ],
+                ),
+                leading: Radio<double?>(
+                  value: 4.0,
+                  groupValue: _selectedMinRating,
+                  onChanged: (double? value) {
+                    setState(() {
+                      _selectedMinRating = value;
+                      _applyFilters();
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Row(
+                  children: [
+                    Icon(Icons.star, color: Color(0xFFFFC107), size: 18),
+                    SizedBox(width: 4),
+                    Text('3.5 ke atas'),
+                  ],
+                ),
+                leading: Radio<double?>(
+                  value: 3.5,
+                  groupValue: _selectedMinRating,
+                  onChanged: (double? value) {
+                    setState(() {
+                      _selectedMinRating = value;
+                      _applyFilters();
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Row(
+                  children: [
+                    Icon(Icons.star, color: Color(0xFFFFC107), size: 18),
+                    SizedBox(width: 4),
+                    Text('3.0 ke atas'),
+                  ],
+                ),
+                leading: Radio<double?>(
+                  value: 3.0,
+                  groupValue: _selectedMinRating,
+                  onChanged: (double? value) {
+                    setState(() {
+                      _selectedMinRating = value;
+                      _applyFilters();
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 4),
-          const Icon(Icons.keyboard_arrow_down, size: 16),
-        ],
+        );
+      },
+    );
+  }
+
+  String _getTypeLabel() {
+    if (_selectedType == null) return "Jenis Lapangan";
+    switch (_selectedType!) {
+      case FieldType.FUTSAL:
+        return "Futsal";
+      case FieldType.BASKET:
+        return "Basket";
+      case FieldType.BULUTANGKIS:
+        return "Bulutangkis";
+    }
+  }
+
+  String _getRatingLabel() {
+    if (_selectedMinRating == null) return "Filter Ulasan";
+    return "Rating ≥ ${_selectedMinRating!.toStringAsFixed(1)}";
+  }
+
+  Widget _buildFilterChip(String label, VoidCallback onTap, {bool isTypeFilter = false, bool isRatingFilter = false}) {
+    String displayLabel = label;
+    if (isTypeFilter) {
+      displayLabel = _getTypeLabel();
+    } else if (isRatingFilter) {
+      displayLabel = _getRatingLabel();
+    }
+
+    bool isActive = false;
+    if (isTypeFilter && _selectedType != null) {
+      isActive = true;
+    } else if (isRatingFilter && _selectedMinRating != null) {
+      isActive = true;
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(
+            color: const Color(0xFF4D5833),
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isActive)
+              Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.only(right: 6),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF4D5833),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            Text(
+              displayLabel,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                color: Color(0xFF4D5833),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Icon(
+              Icons.keyboard_arrow_down,
+              size: 16,
+              color: Color(0xFF4D5833),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -302,10 +528,20 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               const SizedBox(height: 8),
               TextField(
+                controller: _searchController,
                 decoration: InputDecoration(
                   hintText: "Ketikkan nama lapangan..",
                   hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.grey),
+                          onPressed: () {
+                            _searchController.clear();
+                          },
+                        )
+                      : null,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(color: Colors.grey[300]!),
@@ -314,6 +550,10 @@ class _MyHomePageState extends State<MyHomePage> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(color: Colors.grey[300]!),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFF6B8E23)),
+                  ),
                 ),
               ),
 
@@ -321,9 +561,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
               Row(
                 children: [
-                  _buildFilterChip("Jenis Lapangan"),
+                  _buildFilterChip("Jenis Lapangan", _showTypeFilterDialog, isTypeFilter: true),
                   const SizedBox(width: 12),
-                  _buildFilterChip("Filter Ulasan"),
+                  _buildFilterChip("Filter Ulasan", _showRatingFilterDialog, isRatingFilter: true),
                 ],
               ),
 
@@ -332,9 +572,7 @@ class _MyHomePageState extends State<MyHomePage> {
               if (_isLoading)
                 const Center(child: Padding(
                   padding: EdgeInsets.all(30.0),
-                  child: CircularProgressIndicator(
-                    color: Color(0xFFA7BF6E),
-                  ),
+                  child: CircularProgressIndicator(),
                 ))
               else if (_errorMessage.isNotEmpty)
                 Center(child: Padding(
@@ -343,7 +581,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     children: [
                       const Icon(Icons.error_outline, color: Colors.red, size: 40),
                       const SizedBox(height: 10),
-                      Text(
+Text(
                         _errorMessage,
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.red),
@@ -351,20 +589,64 @@ class _MyHomePageState extends State<MyHomePage> {
                       const SizedBox(height: 10),
                       ElevatedButton(
                         onPressed: fetchLapanganData,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFA7BF6E),
-                        ),
                         child: const Text('Coba Lagi'),
                       ),
                     ],
                   ),
                 ))
-              else if (_lapangans.isEmpty)
-                const Center(child: Padding(
-                  padding: EdgeInsets.all(30.0),
-                  child: Text("Tidak ada data lapangan ditemukan."),
+              else if (_filteredLapangans.isEmpty)
+                Center(child: Padding(
+                  padding: const EdgeInsets.all(30.0),
+                  child: Column(
+                    children: [
+                      Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        _lapangans.isEmpty 
+                            ? "Tidak ada data lapangan ditemukan."
+                            : "Tidak ada lapangan yang sesuai dengan filter.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
                 ))
               else
+                Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Text(
+                        'Ditemukan ${_filteredLapangans.length} lapangan',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    GridView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2, 
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.75,
+                      ),
+                      itemCount: _filteredLapangans.length,
+                      itemBuilder: (context, index) {
+                        return LapanganEntryCard(
+                          lapangan: _filteredLapangans[index],
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Kamu memilih ${_filteredLapangans[index].name}")),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ],
                 GridView.builder(
                   physics: const NeverScrollableScrollPhysics(),
                   shrinkWrap: true,
@@ -378,7 +660,18 @@ class _MyHomePageState extends State<MyHomePage> {
                   itemBuilder: (context, index) {
                     return LapanganEntryCard(
                       lapangan: _lapangans[index],
-                      onTap: () => _navigateToBooking(_lapangans[index]), // Navigasi ke BookingScreen
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BookingScreen(
+                              lapanganId: _lapangans[index].id,
+                              sessionCookie: 'auto',
+                              username: _userName,
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),

@@ -1,4 +1,4 @@
-name: lapangin
+name: lapangin_mobile
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  intl: ^0.18.1
   flutter:
     sdk: flutter
 
@@ -40,6 +41,7 @@ dependencies:
   intl: ^0.18.1         
   url_launcher: ^6.2.1  
   image_picker: ^1.0.4 
+  fluttertoast: ^9.0.0
 
 dev_dependencies:
   flutter_test:
