@@ -1,9 +1,10 @@
+// lib/authbooking/screens/login.dart
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:lapangin/authbooking/screens/register.dart';
 import 'package:lapangin/landing/screens/menu.dart';
-import 'package:lapangin/admin-dashboard/screens/admin_home_screen.dart';
+import 'package:lapangin/admin-dashboard/screens/admin_dashboard_screen.dart';
 import 'package:lapangin/config.dart';
 
 class LoginPage extends StatefulWidget {
@@ -231,7 +232,6 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final response = await request.login(
         "${Config.localUrl}${Config.loginEndpoint}",
-        // "${Config.baseUrl}${Config.loginEndpoint}", // Uncomment untuk production
         {
           'username': _usernameController.text,
           'password': _passwordController.text,
@@ -248,18 +248,18 @@ class _LoginPageState extends State<LoginPage> {
       print("================================");
 
       if (request.loggedIn && response['status'] == true) {
-        // Ambil role dari response
         final String? userRole = response['role'] ?? request.jsonData['role'];
         final String username = response['username'] ?? _usernameController.text;
 
         print("🎯 User Role: $userRole");
         print("👤 Username: $username");
 
+        if (!mounted) return;
+
         // Navigate berdasarkan role
         if (userRole != null) {
           _navigateBasedOnRole(userRole, username);
         } else {
-          // Fallback jika role tidak ditemukan
           print("⚠️ Role tidak ditemukan, navigate ke MyHomePage (default)");
           Navigator.pushReplacement(
             context,
@@ -288,21 +288,33 @@ class _LoginPageState extends State<LoginPage> {
     print("🚀 Navigating based on role: $role");
 
     if (role.toUpperCase() == 'PENYEWA') {
-      // Navigate ke halaman penyewa (user biasa)
       print("✅ Navigate to MyHomePage (PENYEWA)");
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => MyHomePage()),
       );
     } else if (role.toUpperCase() == 'PEMILIK') {
-      // Navigate ke halaman admin/pemilik
-      print("✅ Navigate to AdminHomeScreen (PEMILIK)");
+      print("✅ Navigate to AdminDashboardScreen (PEMILIK)");
+      
+      // Get session cookie
+      final request = context.read<CookieRequest>();
+      String sessionCookie = '';
+      if (request.cookies.isNotEmpty) {
+        sessionCookie = request.cookies.entries
+            .map((e) => '${e.key}=${e.value.value}')
+            .join('; ');
+      }
+      
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const AdminHomeScreen()),
+        MaterialPageRoute(
+          builder: (context) => AdminDashboardScreen(
+            sessionCookie: sessionCookie,
+            username: username,
+          ),
+        ),
       );
     } else {
-      // Fallback untuk role yang tidak dikenali
       print("⚠️ Unknown role: $role, navigate ke MyHomePage");
       Navigator.pushReplacement(
         context,

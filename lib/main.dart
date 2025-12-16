@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lapangin/authbooking/screens/login.dart';
-import 'package:lapangin/admin-dashboard/screens/admin_login_screen.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 
@@ -26,15 +25,12 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
         ),
         
-        // TEMPORARY: Set initial route ke AdminLoginScreen untuk testing
-        // Ganti kembali ke LoginPage() setelah testing selesai
-        home: const AdminLoginScreen(), // <-- UBAH INI UNTUK TESTING ADMIN LOGIN
-        // home: const LoginPage(), // <-- Uncomment ini setelah testing
+        // Gunakan LoginPage sebagai initial route
+        home: const LoginPage(),
         
-        // Atau bisa gunakan routes untuk navigasi lebih fleksibel
+        // Routes untuk navigasi
         routes: {
           '/login': (context) => const LoginPage(),
-          '/admin-login': (context) => const AdminLoginScreen(),
         },
       ),
     );
