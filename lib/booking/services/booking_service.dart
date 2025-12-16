@@ -1,10 +1,9 @@
-// lib/booking/services/booking_service.dart
-
+// lib/booking/services/booking_service.dart - COMPLETE FIXED VERSION
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/booking_models.dart';
-import '../../config.dart'; // Import config file
+import '../../config.dart';
 
 class BookingService {
   // ============================================================
@@ -13,9 +12,7 @@ class BookingService {
   static Future<List<Lapangan>> getLapanganList() async {
     try {
       final response = await http.get(
-        // klo udh deploy di pws pake yang baseUrl
-        // Uri.parse('${Config.baseUrl}${Config.lapanganListEndpoint}'),
-        Uri.parse('${Config.localUrl}${Config.lapanganListEndpoint}'),
+        Uri.parse(Config.getUrl(Config.lapanganListEndpoint)),
       );
 
       if (response.statusCode == 200) {
@@ -38,9 +35,7 @@ class BookingService {
   static Future<Lapangan> getLapanganDetail(int lapanganId) async {
     try {
       final response = await http.get(
-        // klo udh deploy di pws pake yang baseUrl
-        // Uri.parse('${Config.baseUrl}${Config.lapanganDetailEndpoint}$lapanganId/'),
-        Uri.parse('${Config.localUrl}${Config.lapanganDetailEndpoint}$lapanganId/'),
+        Uri.parse(Config.getUrl('${Config.lapanganDetailEndpoint}$lapanganId/')),
       );
 
       if (response.statusCode == 200) {
@@ -61,12 +56,10 @@ class BookingService {
   static Future<BookingSlotsResponse> getAvailableSlots(
     int lapanganId, {
     String? date,
-    int days = 3,
+    int days = 7,
   }) async {
     try {
-      // klo udh deploy di pws pake yang baseUrl
-      // String url = '${Config.baseUrl}${Config.availableSlotsEndpoint}$lapanganId/?days=$days';
-      String url = '${Config.localUrl}${Config.availableSlotsEndpoint}$lapanganId/?days=$days';
+      String url = '${Config.getUrl(Config.availableSlotsEndpoint)}$lapanganId/?days=$days';
       if (date != null) {
         url += '&date=$date';
       }
@@ -86,7 +79,7 @@ class BookingService {
   }
 
   // ============================================================
-  // 4. Create Booking
+  // 4. Create Booking (Legacy - with session cookie string)
   // ============================================================
   static Future<Map<String, dynamic>> createBooking(
     int slotId,
@@ -94,9 +87,7 @@ class BookingService {
   ) async {
     try {
       final response = await http.post(
-        // klo udh deploy di pws pake yang baseUrl
-        // Uri.parse('${Config.baseUrl}${Config.createBookingEndpoint}'),
-        Uri.parse('${Config.localUrl}${Config.createBookingEndpoint}'),
+        Uri.parse(Config.getUrl(Config.createBookingEndpoint)),
         headers: {
           'Content-Type': 'application/json',
           'Cookie': sessionCookie,
@@ -124,7 +115,7 @@ class BookingService {
   }
 
   // ============================================================
-  // 5. Get Booking Detail
+  // 5. Get Booking Detail (Legacy)
   // ============================================================
   static Future<Booking> getBookingDetail(
     int bookingId,
@@ -132,9 +123,7 @@ class BookingService {
   ) async {
     try {
       final response = await http.get(
-        // klo udh deploy di pws pake yang baseUrl
-        // Uri.parse('${Config.baseUrl}${Config.bookingDetailEndpoint}$bookingId/'),
-         Uri.parse('${Config.localUrl}${Config.bookingDetailEndpoint}$bookingId/'),
+        Uri.parse(Config.getUrl('${Config.bookingDetailEndpoint}$bookingId/')),
         headers: {
           'Cookie': sessionCookie,
         },
@@ -160,24 +149,17 @@ class BookingService {
   }
 
   // ============================================================
-  // 6. Get My Bookings
+  // 6. Get My Bookings (Legacy)
   // ============================================================
   static Future<List<Booking>> getMyBookings(String sessionCookie) async {
     try {
-      print("=== DEBUG getMyBookings ===");
-      print("Session Cookie: $sessionCookie");
-      print("URL: ${Config.localUrl}${Config.myBookingsEndpoint}");
-
       final response = await http.get(
-        Uri.parse('${Config.localUrl}${Config.myBookingsEndpoint}'),
+        Uri.parse(Config.getUrl(Config.myBookingsEndpoint)),
         headers: {
           'Cookie': sessionCookie,
           'Content-Type': 'application/json',
         },
       );
-
-      print("Response Status: ${response.statusCode}");
-      print("Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -190,18 +172,14 @@ class BookingService {
         throw Exception('Anda harus login terlebih dahulu');
       }
       
-      // Debug additional info
-      print("Response Headers: ${response.headers}");
-      
       throw Exception('Gagal memuat daftar booking: ${response.statusCode}');
     } catch (e) {
-      print("Error in getMyBookings: $e");
       rethrow;
     }
   }
 
   // ============================================================
-  // 7. Cancel Booking (Optional)
+  // 7. Cancel Booking
   // ============================================================
   static Future<void> cancelBooking(
     int bookingId,
@@ -209,9 +187,7 @@ class BookingService {
   ) async {
     try {
       final response = await http.post(
-        // klo udh deploy di pws pake yang baseUrl
-        // Uri.parse('${Config.baseUrl}${Config.cancelBookingEndpoint}$bookingId/cancel/'),
-        Uri.parse('${Config.localUrl}${Config.cancelBookingEndpoint}$bookingId/cancel/'),
+        Uri.parse(Config.getUrl('${Config.cancelBookingEndpoint}$bookingId/cancel/')),
         headers: {
           'Cookie': sessionCookie,
         },
@@ -242,18 +218,13 @@ class BookingService {
   }
 
   // ============================================================
-  // 8. Get My Bookings using CookieRequest (Recommended)
+  // 8. Get My Bookings using CookieRequest (RECOMMENDED)
   // ============================================================
   static Future<List<Booking>> getMyBookingsWithRequest(CookieRequest request) async {
     try {
-      print("=== DEBUG getMyBookingsWithRequest ===");
-      
       final response = await request.get(
-        '${Config.localUrl}${Config.myBookingsEndpoint}'
+        Config.getUrl(Config.myBookingsEndpoint)
       );
-
-      print("Response Type: ${response.runtimeType}");
-      print("Response: $response");
 
       if (response is Map && response['status'] == 'success') {
         return (response['data'] as List)
@@ -262,84 +233,66 @@ class BookingService {
       } else if (response is Map && response['status'] == 'error') {
         throw Exception(response['message'] ?? 'Gagal memuat daftar booking');
       } else {
-        throw Exception('Format response tidak dikenali: $response');
+        throw Exception('Format response tidak dikenali');
       }
     } catch (e) {
-      print("Error in getMyBookingsWithRequest: $e");
       rethrow;
     }
   }
 
-// ============================================================
-// 9. Create Booking using CookieRequest (Recommended) - UPDATED
-// ============================================================
-static Future<Map<String, dynamic>> createBookingWithRequest(
-  CookieRequest request, 
-  int slotId
-) async {
-  try {
-    print("=== DEBUG createBookingWithRequest ===");
-    print("Slot ID: $slotId");
-    print("Request logged in: ${request.loggedIn}");
-    print("Cookies: ${request.cookies}");
-    
-    // Gunakan postJson untuk kirim JSON body
-    final response = await request.postJson(
-      '${Config.localUrl}${Config.createBookingEndpoint}',
-      jsonEncode({
-        'slot_id': slotId,
-      }),
-    );
+  // ============================================================
+  // 9. Create Booking using CookieRequest (RECOMMENDED)
+  // ============================================================
+  static Future<Map<String, dynamic>> createBookingWithRequest(
+    CookieRequest request, 
+    int slotId
+  ) async {
+    try {
+      final response = await request.postJson(
+        Config.getUrl(Config.createBookingEndpoint),
+        jsonEncode({
+          'slot_id': slotId,
+        }),
+      );
 
-    print("Response Type: ${response.runtimeType}");
-    print("Full Response: $response");
-
-    if (response is Map && response['status'] == 'success') {
-      return {
-        'success': true,
-        'booking_id': response['data']['booking_id'],
-        'message': response['message'] ?? 'Booking berhasil',
-        'data': response['data'],
-      };
-    } else if (response is Map && response['status'] == 'error') {
-      throw Exception(response['message'] ?? 'Gagal membuat booking');
-    } else {
-      throw Exception('Format response tidak dikenali: $response');
+      if (response is Map && response['status'] == 'success') {
+        return {
+          'success': true,
+          'booking_id': response['data']['booking_id'],
+          'message': response['message'] ?? 'Booking berhasil',
+          'data': response['data'],
+        };
+      } else if (response is Map && response['status'] == 'error') {
+        throw Exception(response['message'] ?? 'Gagal membuat booking');
+      } else {
+        throw Exception('Format response tidak dikenali');
+      }
+    } catch (e) {
+      rethrow;
     }
-  } catch (e) {
-    print("Error in createBookingWithRequest: $e");
-    rethrow;
   }
-}
 
-// ============================================================
-// 10. Get Booking Detail using CookieRequest (Recommended)
-// ============================================================
-static Future<Booking> getBookingDetailWithRequest(
-  CookieRequest request,
-  int bookingId,
-) async {
-  try {
-    print("=== DEBUG getBookingDetailWithRequest ===");
-    print("Booking ID: $bookingId");
-    
-    final response = await request.get(
-      '${Config.localUrl}${Config.bookingDetailEndpoint}$bookingId/'
-    );
+  // ============================================================
+  // 10. Get Booking Detail using CookieRequest (RECOMMENDED)
+  // ============================================================
+  static Future<Booking> getBookingDetailWithRequest(
+    CookieRequest request,
+    int bookingId,
+  ) async {
+    try {
+      final response = await request.get(
+        Config.getUrl('${Config.bookingDetailEndpoint}$bookingId/')
+      );
 
-    print("Response Type: ${response.runtimeType}");
-    print("Response: $response");
-
-    if (response is Map && response['status'] == 'success') {
-      return Booking.fromJson(response['data']);
-    } else if (response is Map && response['status'] == 'error') {
-      throw Exception(response['message'] ?? 'Gagal memuat detail booking');
-    } else {
-      throw Exception('Format response tidak dikenali: $response');
+      if (response is Map && response['status'] == 'success') {
+        return Booking.fromJson(response['data']);
+      } else if (response is Map && response['status'] == 'error') {
+        throw Exception(response['message'] ?? 'Gagal memuat detail booking');
+      } else {
+        throw Exception('Format response tidak dikenali');
+      }
+    } catch (e) {
+      rethrow;
     }
-  } catch (e) {
-    print("Error in getBookingDetailWithRequest: $e");
-    rethrow;
   }
-}
 }

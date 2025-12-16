@@ -1,12 +1,22 @@
+// lib/main.dart - FIXED VERSION
 import 'package:flutter/material.dart';
-import 'package:lapangin_mobile/authbooking/screens/login.dart';
-import 'package:lapangin/authbooking/screens/login.dart';
-import 'package:lapangin/admin-dashboard/screens/admin_login_screen.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:lapangin_mobile/landing/screens/menu.dart';
-import 'package:lapangin_mobile/community/screens/community_page.dart';
+
+// Auth & Booking
+import 'package:lapangin/authbooking/screens/login.dart';
+import 'package:lapangin/landing/screens/menu.dart';
+
+// Admin Dashboard
+import 'package:lapangin/admin-dashboard/screens/admin_dashboard_screen.dart';
 import 'package:lapangin/admin-dashboard/screens/booking_pending_screen.dart';
+import 'package:lapangin/admin-dashboard/screens/lapangan_list_screen.dart';
+
+// Community
+import 'package:lapangin/community/screens/community_page.dart';
+
+// Booking
+import 'package:lapangin/booking/screens/my_bookings_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -23,22 +33,32 @@ class MyApp extends StatelessWidget {
         return request;
       },
       child: MaterialApp(
-        title: 'Lapangin',
+        title: 'Lapang.in',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
-              .copyWith(secondary: Colors.blueAccent[400]),
           useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFFA7BF6E),
+            primary: const Color(0xFFA7BF6E),
+          ),
+          appBarTheme: const AppBarTheme(
+            centerTitle: false,
+            elevation: 0,
+          ),
         ),
         
-        // TEMPORARY: Set initial route ke AdminLoginScreen untuk testing
-        // Ganti kembali ke LoginPage() setelah testing selesai
-        home: const AdminLoginScreen(), // <-- UBAH INI UNTUK TESTING ADMIN LOGIN
-        // home: const LoginPage(), // <-- Uncomment ini setelah testing
+        // ✅ Initial route adalah login (semua user masuk dari sini)
+        home: const LoginPage(),
         
-        // Atau bisa gunakan routes untuk navigasi lebih fleksibel
+        // ✅ Define semua routes
         routes: {
           '/login': (context) => const LoginPage(),
-          '/admin-login': (context) => const AdminLoginScreen(),
+          '/home': (context) => const MyHomePage(),
+          '/community': (context) => const CommunityPage(),
+          '/my-bookings': (context) => const MyBookingsScreen(),
+          
+          // Admin routes - akan di-handle di login.dart
+          // Tidak perlu route terpisah karena navigation dilakukan manual
         },
       ),
     );

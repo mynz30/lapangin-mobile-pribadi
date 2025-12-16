@@ -1,10 +1,10 @@
-// lapangin/lib/authbooking/screens/register.dart
+// lib/authbooking/screens/register.dart - FIXED VERSION
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:lapangin_mobile/authbooking/screens/login.dart';
+import 'package:lapangin/authbooking/screens/login.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:lapangin_mobile/config.dart';
+import 'package:lapangin/config.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -24,7 +24,6 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isLoading = false;
   String _selectedRole = 'PENYEWA';
 
-  // visibility toggles for password fields
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
 
@@ -33,7 +32,6 @@ class _RegisterPageState extends State<RegisterPage> {
     {'value': 'PEMILIK', 'label': 'Pemilik Lapangan'},
   ];
 
-  // Validasi nomor WhatsApp - HANYA WAJIB untuk PEMILIK
   String? _validateWhatsApp(String? value, String role) {
     if (role == 'PEMILIK') {
       if (value == null || value.isEmpty) {
@@ -62,8 +60,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final request = context.watch<CookieRequest>();
-
     const Color primaryGreen = Color(0xFFC4DA6B);
     const Color darkButton = Color(0xFF2F2F2F);
     const Color headerText = Color(0xFF333333);
@@ -77,7 +73,7 @@ class _RegisterPageState extends State<RegisterPage> {
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
             child: Column(
               children: [
-                // Header (centered)
+                // Header
                 const Text(
                   'Register',
                   style: TextStyle(
@@ -97,7 +93,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     children: [
                       TextSpan(
-                        text: 'Lapangin',
+                        text: 'Lapang.in',
                         style: TextStyle(
                           fontSize: 14,
                           color: primaryGreen,
@@ -114,7 +110,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 const SizedBox(height: 28),
 
-                // Card container
+                // Form Card
                 ConstrainedBox(
                   constraints: const BoxConstraints(
                     maxWidth: cardMaxWidth,
@@ -388,7 +384,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 const SizedBox(height: 24),
 
-                // REGISTER BUTTON
+                // Register Button
                 _isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : SizedBox(
@@ -397,7 +393,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         child: ElevatedButton(
                           onPressed: () async {
                             if (_formKey.currentState!.validate()) {
-                              await _registerUser(request);
+                              await _registerUser();
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -419,7 +415,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 const SizedBox(height: 16),
 
-                // LOGIN BUTTON
+                // Login Button
                 SizedBox(
                   width: double.infinity,
                   height: 54,
@@ -456,7 +452,10 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Future<void> _registerUser(CookieRequest request) async {
+  Future<void> _registerUser() async {
+    if (!mounted) return;
+    final request = context.read<CookieRequest>();
+
     setState(() {
       _isLoading = true;
     });
@@ -488,24 +487,16 @@ class _RegisterPageState extends State<RegisterPage> {
         requestData["nomor_rekening"] = _nomorRekeningController.text.trim();
       }
 
-      print("🔵 Sending registration data: $requestData");
-
       final response = await request.postJson(
-        //kalo udah deploy di pws, pake yang baseUrl
-        // "${Config.baseUrl}${Config.registerEndpoint}",
-        "${Config.localUrl}${Config.registerEndpoint}",
+        Config.getUrl(Config.registerEndpoint),
         jsonEncode(requestData),
       );
-
-      print("Registration response: $response");
-      print("Response status: ${response['status']}");
-      print("Response message: ${response['message']}");
 
       setState(() {
         _isLoading = false;
       });
 
-      if (!context.mounted) return;
+      if (!mounted) return;
 
       final status = response['status'];
       bool isSuccess = false;
@@ -516,8 +507,6 @@ class _RegisterPageState extends State<RegisterPage> {
         isSuccess = status.toLowerCase() == 'true' ||
             status.toLowerCase() == 'success';
       }
-
-      print("isSuccess: $isSuccess");
 
       if (isSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -530,7 +519,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
         await Future.delayed(const Duration(milliseconds: 2000));
 
-        if (context.mounted) {
+        if (mounted) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -554,15 +543,12 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         );
       }
-    } catch (e, stackTrace) {
-      print("Registration error: $e");
-      print("Stack trace: $stackTrace");
-
+    } catch (e) {
       setState(() {
         _isLoading = false;
       });
 
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Connection error: ${e.toString()}'),

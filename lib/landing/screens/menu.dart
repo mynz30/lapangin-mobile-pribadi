@@ -1,10 +1,12 @@
+// lib/landing/screens/menu.dart - FIXED VERSION
 import 'package:flutter/material.dart';
-import 'package:lapangin_mobile/landing/widgets/left_drawer.dart'; 
-import 'package:lapangin_mobile/landing/widgets/card_lapangan.dart'; 
-import 'package:lapangin_mobile/landing/models/lapangan_entry.dart'; 
+import 'package:lapangin/landing/widgets/left_drawer.dart'; 
+import 'package:lapangin/landing/widgets/card_lapangan.dart'; 
+import 'package:lapangin/landing/models/lapangan_entry.dart'; 
 import 'package:pbp_django_auth/pbp_django_auth.dart'; 
 import 'package:provider/provider.dart';
 import 'package:lapangin/booking/screens/booking_screen.dart';
+import 'package:lapangin/config.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -18,9 +20,6 @@ class _MyHomePageState extends State<MyHomePage> {
   List<LapanganEntry> _filteredLapangans = [];
   bool _isLoading = true;
   String _errorMessage = '';
-
-  final String apiUrl = "http://localhost:8000/api/booking/"; 
-  final String _baseServerUrl = "http://localhost:8000"; 
 
   String _userName = "User";
   
@@ -49,12 +48,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final request = context.read<CookieRequest>();
     final userData = request.jsonData;
 
-    print("--- Data User Tersimpan di CookieRequest (lapangin) ---");
-    print(userData);
-    print("-------------------------------------------------------");
-
     const potentialKeys = ['username', 'first_name', 'name', 'fullname'];
-
     String? foundName;
 
     for (var key in potentialKeys) {
@@ -62,7 +56,6 @@ class _MyHomePageState extends State<MyHomePage> {
         final nameCandidate = userData[key].toString();
         if (nameCandidate.isNotEmpty) {
           foundName = nameCandidate;
-          print("Ditemukan nama pengguna dengan kunci: $key. Nilai: $foundName");
           break;
         }
       }
@@ -93,13 +86,14 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     try {
-      final response = await request.get(apiUrl);
+      final response = await request.get(
+        Config.getUrl(Config.lapanganListEndpoint)
+      );
       
       List<LapanganEntry> fetchedLapangans = [];
       
       if (response is List) {
         for (var item in response) {
-          
           final id = item['id'];
           final name = item['name'];
           final typeString = item['type'];
@@ -110,7 +104,6 @@ class _MyHomePageState extends State<MyHomePage> {
           String imageUrl = item['image'] ?? "";
           
           if (id != null && name != null && typeString != null) { 
-            
             fetchedLapangans.add(LapanganEntry(
               id: id,
               name: name,
@@ -121,8 +114,6 @@ class _MyHomePageState extends State<MyHomePage> {
               reviewCount: reviewCount ?? 0,
               image: imageUrl, 
             ));
-          } else {
-            print('Peringatan: Item data tidak valid (ID, Name, Type hilang, atau Tipe tidak dikenali): $item');
           }
         }
 
@@ -132,15 +123,11 @@ class _MyHomePageState extends State<MyHomePage> {
           _isLoading = false;
         });
       } else {
-        throw Exception("API response is not a valid list format. Did you return a single object instead of a list?");
+        throw Exception("Invalid API response format");
       }
     } catch (e) {
-      String errorDetail = e.toString().contains('FormatException') 
-          ? 'Respons bukan JSON (mungkin HTML/halaman login/404). Cek URL Django.'
-          : e.toString();
-          
       setState(() {
-        _errorMessage = 'Gagal mengambil data: $errorDetail. Pastikan URL server ($_baseServerUrl) dan server Django aktif.';
+        _errorMessage = 'Gagal mengambil data: ${e.toString()}';
         _isLoading = false;
       });
       print('Error fetching data: $e');
@@ -298,46 +285,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   },
                 ),
               ),
-              ListTile(
-                title: const Row(
-                  children: [
-                    Icon(Icons.star, color: Color(0xFFFFC107), size: 18),
-                    SizedBox(width: 4),
-                    Text('3.5 ke atas'),
-                  ],
-                ),
-                leading: Radio<double?>(
-                  value: 3.5,
-                  groupValue: _selectedMinRating,
-                  onChanged: (double? value) {
-                    setState(() {
-                      _selectedMinRating = value;
-                      _applyFilters();
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-              ListTile(
-                title: const Row(
-                  children: [
-                    Icon(Icons.star, color: Color(0xFFFFC107), size: 18),
-                    SizedBox(width: 4),
-                    Text('3.0 ke atas'),
-                  ],
-                ),
-                leading: Radio<double?>(
-                  value: 3.0,
-                  groupValue: _selectedMinRating,
-                  onChanged: (double? value) {
-                    setState(() {
-                      _selectedMinRating = value;
-                      _applyFilters();
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
             ],
           ),
         );
@@ -478,6 +425,7 @@ class _MyHomePageState extends State<MyHomePage> {
             children: [
               const SizedBox(height: 16),
               
+              // Hero Banner
               Container(
                 width: double.infinity,
                 height: 160,
@@ -518,6 +466,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
               const SizedBox(height: 24),
 
+              // Search Section
               const Text(
                 "Cari Lapangan",
                 style: TextStyle(
@@ -559,6 +508,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
               const SizedBox(height: 16),
 
+              // Filter Chips
               Row(
                 children: [
                   _buildFilterChip("Jenis Lapangan", _showTypeFilterDialog, isTypeFilter: true),
@@ -569,6 +519,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
               const SizedBox(height: 20),
 
+              // Content
               if (_isLoading)
                 const Center(child: Padding(
                   padding: EdgeInsets.all(30.0),
@@ -581,7 +532,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     children: [
                       const Icon(Icons.error_outline, color: Colors.red, size: 40),
                       const SizedBox(height: 10),
-Text(
+                      Text(
                         _errorMessage,
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.red),
@@ -639,41 +590,21 @@ Text(
                         return LapanganEntryCard(
                           lapangan: _filteredLapangans[index],
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Kamu memilih ${_filteredLapangans[index].name}")),
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => BookingScreen(
+                                  lapanganId: _filteredLapangans[index].id,
+                                  sessionCookie: 'auto',
+                                  username: _userName,
+                                ),
+                              ),
                             );
                           },
                         );
                       },
                     ),
                   ],
-                GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2, 
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 0.75,
-                  ),
-                  itemCount: _lapangans.length,
-                  itemBuilder: (context, index) {
-                    return LapanganEntryCard(
-                      lapangan: _lapangans[index],
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BookingScreen(
-                              lapanganId: _lapangans[index].id,
-                              sessionCookie: 'auto',
-                              username: _userName,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
                 ),
               
               const SizedBox(height: 80), 

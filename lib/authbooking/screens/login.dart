@@ -1,16 +1,10 @@
-// lapangin/lib/authbooking/screens/login.dart
+// lib/authbooking/screens/login.dart - FIXED VERSION
 import 'package:flutter/material.dart';
-import 'package:lapangin_mobile/review/screens/review_lapangan.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:lapangin_mobile/authbooking/screens/register.dart';
-import 'package:lapangin_mobile/landing/screens/menu.dart';
-import 'package:lapangin_mobile/config.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lapangin/authbooking/screens/register.dart';
 import 'package:lapangin/landing/screens/menu.dart';
-// import 'package:lapangin/landing/screens/menu_admin.dart'; // TODO: Import halaman admin setelah dibuat
-// import 'package:lapangin/landing/screens/menu_admin.dart'; // TODO: Import halaman admin setelah dibuat
+import 'package:lapangin/admin-dashboard/screens/admin_dashboard_screen.dart';
 import 'package:lapangin/config.dart';
 
 class LoginPage extends StatefulWidget {
@@ -27,224 +21,27 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-
-
   @override
-  Widget build(BuildContext context) {
-    final request = context.watch<CookieRequest>();
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // TITLE — CENTERED
-                const Center(
-                  child: Text(
-                    'Login',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-
-                Center(
-                  child: RichText(
-                    textAlign: TextAlign.center,
-                    text: const TextSpan(
-                      text: "Welcome back to ",
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: "Lapangin",
-                          style: TextStyle(
-                            color: Color(0xFF8DA35D),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // FORM CARD
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(22),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Username
-                      const Text(
-                        'Username',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF7A8450),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _usernameController,
-                        decoration: InputDecoration(
-                          hintText: "Enter your username here",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        validator: (value) =>
-                            value!.isEmpty ? "Please enter your username" : null,
-                      ),
-
-                      const SizedBox(height: 22),
-
-                      // Password
-                      const Text(
-                        'Password',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF7A8450),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        decoration: InputDecoration(
-                          hintText: "Enter your password here",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                              color: Colors.grey,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                        ),
-                        validator: (value) =>
-                            value!.isEmpty ? "Please enter your password" : null,
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 120),
-
-                // LOGIN BUTTON
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () async {
-                            if (_formKey.currentState!.validate()) {
-                              await _loginUser(request);
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFC4DA6B),
-                      foregroundColor: Colors.black87,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(
-                            color: Colors.white,
-                          )
-                        : const Text(
-                            "Login",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // REGISTER BUTTON
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const RegisterPage()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2F2F2F),
-                      foregroundColor: const Color(0xFFC4DA6B),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      "Register",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
-  Future<void> _loginUser(CookieRequest request) async {
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
+      final request = context.read<CookieRequest>();
+      
       final response = await request.login(
         "${Config.localUrl}${Config.loginEndpoint}",
-        "${Config.localUrl}${Config.loginEndpoint}",
-        // "${Config.baseUrl}${Config.loginEndpoint}", // Uncomment untuk production
-        // "${Config.baseUrl}${Config.loginEndpoint}", // Uncomment untuk production
         {
-          'username': _usernameController.text,
+          'username': _usernameController.text.trim(),
           'password': _passwordController.text,
         },
       );
@@ -258,217 +55,82 @@ class _LoginPageState extends State<LoginPage> {
       print("User Data: ${request.jsonData}");
       print("================================");
 
-      print("=== 🔐 LOGIN RESPONSE DEBUG ===");
-      print("Response: $response");
-      print("Status: ${response['status']}");
-      print("Logged In: ${request.loggedIn}");
-      print("User Data: ${request.jsonData}");
-      print("================================");
-
       if (request.loggedIn && response['status'] == true) {
-        // Ambil role dari response
         final String? userRole = response['role'] ?? request.jsonData['role'];
-        final String username = response['username'] ?? _usernameController.text;
+        final String username = response['username'] ?? _usernameController.text.trim();
 
         print("🎯 User Role: $userRole");
         print("👤 Username: $username");
 
-        // Navigate berdasarkan role
-        if (userRole != null) {
-          _navigateBasedOnRole(userRole, username);
-        } else {
-          // Fallback jika role tidak ditemukan
-          print("⚠️ Role tidak ditemukan, navigate ke MyHomePage (default)");
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => MyHomePage()),
-          );
-        }
-        // Ambil role dari response
-        final String? userRole = response['role'] ?? request.jsonData['role'];
-        final String username = response['username'] ?? _usernameController.text;
+        if (!mounted) return;
 
-        print("🎯 User Role: $userRole");
-        print("👤 Username: $username");
-
-        // Navigate berdasarkan role
-        if (userRole != null) {
-          _navigateBasedOnRole(userRole, username);
-        } else {
-          // Fallback jika role tidak ditemukan
-          print("⚠️ Role tidak ditemukan, navigate ke MyHomePage (default)");
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => MyHomePage()),
-          );
-        }
-
-        // Show success message
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Welcome, $username!"),
-            content: Text("Welcome, $username!"),
+            content: Text("Selamat datang, $username!"),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
           ),
         );
+
+        // Navigate based on role
+        if (userRole != null) {
+          _navigateBasedOnRole(userRole, username, request);
+        } else {
+          // Fallback to user page
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MyHomePage()),
+          );
+        }
       } else {
-        _showErrorDialog(response['message'] ?? "Login failed");
+        _showErrorDialog(response['message'] ?? "Login gagal");
       }
     } catch (e) {
       setState(() => _isLoading = false);
       print("❌ Login Error: $e");
-      print("❌ Login Error: $e");
-      _showErrorDialog("Cannot connect to server: $e");
+      _showErrorDialog("Tidak dapat terhubung ke server: $e");
     }
   }
 
-  void _navigateBasedOnRole(String role, String username) {
+  void _navigateBasedOnRole(String role, String username, CookieRequest request) {
     print("🚀 Navigating based on role: $role");
 
     if (role.toUpperCase() == 'PENYEWA') {
-      // Navigate ke halaman penyewa (user biasa)
+      // Navigate to user home
       print("✅ Navigate to MyHomePage (PENYEWA)");
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => MyHomePage()),
+        MaterialPageRoute(builder: (context) => const MyHomePage()),
       );
     } else if (role.toUpperCase() == 'PEMILIK') {
-      // Navigate ke halaman admin/pemilik
-      print("✅ Navigate to MyHomePageAdmin (PEMILIK)");
+      // Navigate to admin dashboard
+      print("✅ Navigate to AdminDashboard (PEMILIK)");
       
-      // TODO: Ganti ini dengan halaman admin yang sudah dibuat
-      // Navigator.pushReplacement(
-      //   context,
-      //   MaterialPageRoute(builder: (context) => MyHomePageAdmin()),
-      // );
+      // Extract session cookie from request
+      String sessionCookie = '';
+      final cookie = request.cookies['sessionid'];
+      if (cookie != null) {
+        sessionCookie = 'sessionid=${cookie.value}';
+      }
       
-      // SEMENTARA: Tampilkan dialog placeholder
-      _showAdminPagePlaceholder(username);
-    } else {
-      // Fallback untuk role yang tidak dikenali
-      print("⚠️ Unknown role: $role, navigate ke MyHomePage");
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => MyHomePage()),
+        MaterialPageRoute(
+          builder: (context) => AdminDashboardScreen(
+            sessionCookie: sessionCookie,
+            username: username,
+          ),
+        ),
+      );
+    } else {
+      // Unknown role, fallback to user page
+      print("⚠️ Unknown role: $role, navigate to MyHomePage");
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MyHomePage()),
       );
     }
-  }
-
-  // TODO: Hapus fungsi ini setelah MyHomePageAdmin dibuat
-  void _showAdminPagePlaceholder(String username) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          "Admin Page",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Welcome, $username!"),
-            const SizedBox(height: 8),
-            const Text("Role: PEMILIK (Admin)"),
-            const SizedBox(height: 16),
-            const Text(
-              "Halaman admin belum tersedia.\nSementara akan diarahkan ke halaman user.",
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => MyHomePage()),
-              );
-            },
-            child: const Text("OK"),
-          )
-        ],
-      ),
-    );
-  }
-
-  void _navigateBasedOnRole(String role, String username) {
-    print("🚀 Navigating based on role: $role");
-
-    if (role.toUpperCase() == 'PENYEWA') {
-      // Navigate ke halaman penyewa (user biasa)
-      print("✅ Navigate to MyHomePage (PENYEWA)");
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => MyHomePage()),
-      );
-    } else if (role.toUpperCase() == 'PEMILIK') {
-      // Navigate ke halaman admin/pemilik
-      print("✅ Navigate to MyHomePageAdmin (PEMILIK)");
-      
-      // TODO: Ganti ini dengan halaman admin yang sudah dibuat
-      // Navigator.pushReplacement(
-      //   context,
-      //   MaterialPageRoute(builder: (context) => MyHomePageAdmin()),
-      // );
-      
-      // SEMENTARA: Tampilkan dialog placeholder
-      _showAdminPagePlaceholder(username);
-    } else {
-      // Fallback untuk role yang tidak dikenali
-      print("⚠️ Unknown role: $role, navigate ke MyHomePage");
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => MyHomePage()),
-      );
-    }
-  }
-
-  // TODO: Hapus fungsi ini setelah MyHomePageAdmin dibuat
-  void _showAdminPagePlaceholder(String username) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          "Admin Page",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Welcome, $username!"),
-            const SizedBox(height: 8),
-            const Text("Role: PEMILIK (Admin)"),
-            const SizedBox(height: 16),
-            const Text(
-              "Halaman admin belum tersedia.\nSementara akan diarahkan ke halaman user.",
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => MyHomePage()),
-              );
-            },
-            child: const Text("OK"),
-          )
-        ],
-      ),
-    );
   }
 
   void _showErrorDialog(String message) {
@@ -476,7 +138,7 @@ class _LoginPageState extends State<LoginPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text(
-          "Login Failed",
+          "Login Gagal",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         content: Text(message),
@@ -489,6 +151,248 @@ class _LoginPageState extends State<LoginPage> {
             child: const Text("OK"),
           )
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Logo / Icon
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFC4DA6B),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.sports_soccer,
+                      size: 60,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Title
+                  const Text(
+                    'Login',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  RichText(
+                    textAlign: TextAlign.center,
+                    text: const TextSpan(
+                      text: "Welcome back to ",
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 16,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: "Lapang.in",
+                          style: TextStyle(
+                            color: Color(0xFF8DA35D),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Form Card
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Username Field
+                          const Text(
+                            'Username',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF7A8450),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _usernameController,
+                            decoration: InputDecoration(
+                              hintText: "Masukkan username",
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              prefixIcon: const Icon(Icons.person_outline),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Username tidak boleh kosong';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Password Field
+                          const Text(
+                            'Password',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF7A8450),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            decoration: InputDecoration(
+                              hintText: "Masukkan password",
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Password tidak boleh kosong';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Login Button
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _handleLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFC4DA6B),
+                          foregroundColor: Colors.black87,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                "Login",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Register Button
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const RegisterPage()),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2F2F2F),
+                          foregroundColor: const Color(0xFFC4DA6B),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Register",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Info text
+                  Text(
+                    'Login sebagai PEMILIK untuk akses Admin Dashboard',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

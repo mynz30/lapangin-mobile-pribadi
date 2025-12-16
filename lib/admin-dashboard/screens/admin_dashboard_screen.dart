@@ -1,5 +1,9 @@
+// lib/admin-dashboard/screens/admin_dashboard_screen.dart - FIXED VERSION
 import 'package:flutter/material.dart';
 import 'package:lapangin/admin-dashboard/services/dashboard_service.dart';
+import 'package:lapangin/authbooking/screens/login.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:provider/provider.dart';
 import 'booking_pending_screen.dart';
 import 'lapangan_list_screen.dart';
 
@@ -37,9 +41,50 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Apakah Anda yakin ingin logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      final request = context.read<CookieRequest>();
+      
+      try {
+        await request.logout("${widget.sessionCookie}/accounts/logout-flutter/");
+      } catch (e) {
+        print("Logout error: $e");
+      }
+
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+        );
+      }
     }
   }
 
@@ -113,7 +158,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
       drawer: _buildDrawer(),
-      body: _isLoading ? const Center(child: CircularProgressIndicator(color: Color(0xFFA7BF6E))) : _buildContent(),
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFFA7BF6E))) 
+        : _buildContent(),
     );
   }
 
@@ -130,9 +177,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.settings, color: Colors.white),
+                      Icon(Icons.admin_panel_settings, color: Colors.white),
                       SizedBox(width: 8),
-                      Text('Dashboard', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+                      Text('Admin Panel', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
                     ],
                   ),
                   IconButton(
@@ -142,7 +189,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ],
               ),
             ),
-            _buildMenuItem(Icons.home, 'Home', true, () => Navigator.pop(context)),
+            
+            _buildMenuItem(Icons.home, 'Dashboard', true, () => Navigator.pop(context)),
+            
             _buildMenuItem(Icons.sports_soccer, 'Lapangan', false, () {
               Navigator.pop(context);
               Navigator.push(
@@ -155,6 +204,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               );
             }),
+            
             _buildMenuItemWithBadge(
               Icons.access_time,
               'Booking Masuk',
@@ -173,8 +223,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               },
             ),
-            _buildMenuItem(Icons.history, 'Riwayat Transaksi', false, () {}),
-            _buildMenuItem(Icons.people, 'Komunitas', false, () {}),
+            
+            _buildMenuItem(Icons.history, 'Riwayat Transaksi', false, () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Fitur belum tersedia')),
+              );
+            }),
+            
+            const Spacer(),
+            
+            const Divider(color: Colors.white30),
+            
+            _buildMenuItem(Icons.logout, 'Logout', false, _handleLogout),
+            
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -214,15 +276,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           const Text('Dashboard Overview', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
-          // Stats Cards (sesuai design)
+          
+          // Stats Cards
           _buildStatCard(
-            'Total\n100',
+            'Total\n${_stats?['total_lapangan'] ?? 0}',
             'Lapangan Terdaftar',
             Icons.sports_soccer,
             const Color(0xFFA7BF6E),
             const Color(0xFFE8F5E9),
           ),
           const SizedBox(height: 12),
+          
           _buildStatCard(
             'Pending\n${_stats?['pending_bookings'] ?? 0}',
             'Booking Menunggu',
@@ -231,6 +295,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const Color(0xFFFFF3E0),
           ),
           const SizedBox(height: 12),
+          
           _buildStatCard(
             'Total\n${_stats?['total_komunitas'] ?? 0}',
             'Komunitas Aktif',
@@ -239,6 +304,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const Color(0xFFE3F2FD),
           ),
           const SizedBox(height: 24),
+          
           // Alert if pending bookings
           if (_stats != null && _stats!['pending_bookings'] > 0)
             Container(
@@ -258,7 +324,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       children: [
                         Text('Ada ${_stats!['pending_bookings']} Booking Menunggu Approval!',
                             style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
-                        const Text('Segera approve atau tolak booking untuk menghindari pembatalan otomatis.',
+                        const Text('Segera approve atau tolak booking.',
                             style: TextStyle(fontSize: 12, color: Colors.orange)),
                       ],
                     ),
@@ -276,19 +342,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       );
                     },
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                    child: const Text('Lihat Sekarang'),
+                    child: const Text('Lihat'),
                   ),
                 ],
               ),
             ),
           const SizedBox(height: 24),
+          
           // Quick Actions
           const Text('Quick Actions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
+          
           Row(
             children: [
               Expanded(
-                child: _buildActionCard('Tambah Lapangan', Icons.add_circle, const Color(0xFFA7BF6E), () {}),
+                child: _buildActionCard('Kelola Lapangan', Icons.sports_soccer, const Color(0xFFA7BF6E), () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LapanganListScreen(
+                        sessionCookie: widget.sessionCookie,
+                        username: widget.username,
+                      ),
+                    ),
+                  );
+                }),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -303,18 +381,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   );
                 }),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildActionCard('Lihat Transaksi', Icons.receipt, Colors.blue, () {}),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildActionCard('Buat Komunitas', Icons.people, Colors.blue, () {}),
               ),
             ],
           ),
@@ -352,17 +418,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ],
                 ),
                 Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
-                TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Kelola', style: TextStyle(color: iconColor)),
-                      Icon(Icons.arrow_forward, size: 16, color: iconColor),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),

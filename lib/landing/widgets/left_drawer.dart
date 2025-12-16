@@ -1,22 +1,17 @@
+// lib/landing/widgets/left_drawer.dart - FIXED VERSION
 import 'package:flutter/material.dart';
 import 'package:lapangin/authbooking/screens/login.dart';
 import 'package:lapangin/booking/screens/my_bookings_screen.dart';
 import 'package:lapangin/landing/screens/menu.dart';
-// ignore: unused_import
-import 'package:pbp_django_auth/pbp_django_auth.dart';
-// ignore: unused_import
-import 'package:provider/provider.dart';
-import 'package:lapangin_mobile/authbooking/screens/login.dart';
-import 'package:lapangin_mobile/landing/screens/menu.dart';
-import 'package:lapangin_mobile/community/screens/community_page.dart';
+import 'package:lapangin/community/screens/community_page.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:lapangin_mobile/config.dart';
+import 'package:lapangin/config.dart';
 
 const TextStyle darkHeadingStyle = TextStyle(
   color: Color(0xFF4D5833),
   fontFamily: 'Montserrat',
-  fontSize: 20, 
+  fontSize: 20,
   fontStyle: FontStyle.normal,
   fontWeight: FontWeight.w700,
   height: 1.2,
@@ -24,7 +19,7 @@ const TextStyle darkHeadingStyle = TextStyle(
 );
 
 const TextStyle lightStyle = TextStyle(
-  color: Color(0xFFF8FBF2), 
+  color: Color(0xFFF8FBF2),
   fontFamily: 'Montserrat',
   fontStyle: FontStyle.normal,
   fontWeight: FontWeight.normal,
@@ -37,8 +32,6 @@ const TextStyle subheadingS9Style = TextStyle(
   fontStyle: FontStyle.normal,
   fontWeight: FontWeight.w600,
   height: 1.2,
-  fontWeight: FontWeight.w400, // Semi-Bold
-  height: 1.2, // line-height: 120% (12px / 10px)
 );
 
 class LeftDrawer extends StatelessWidget {
@@ -46,11 +39,13 @@ class LeftDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final request = context.watch<CookieRequest>();
+
     return Drawer(
       child: ListView(
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Color(0xFFA7BF6E),
             ),
             child: Column(
@@ -77,11 +72,11 @@ class LeftDrawer extends StatelessWidget {
                     ],
                   ),
                 ),
-                Padding(padding: EdgeInsets.all(10)),
-                Text(
+                const Padding(padding: EdgeInsets.all(10)),
+                const Text(
                   'Cari lapangan, pilih jadwal, langsung main!',
-                  textAlign: TextAlign.left, 
-                  style: subheadingS9Style
+                  textAlign: TextAlign.left,
+                  style: subheadingS9Style,
                 ),
               ],
             ),
@@ -94,10 +89,10 @@ class LeftDrawer extends StatelessWidget {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const MyHomePage()),
-                MaterialPageRoute(builder: (context) => const MyHomePage()),
               );
             },
           ),
+          
           ListTile(
             leading: const Icon(Icons.group),
             title: const Text('Community'),
@@ -108,59 +103,64 @@ class LeftDrawer extends StatelessWidget {
               );
             },
           ),
+          
           ListTile(
             leading: const Icon(Icons.calendar_today),
             title: const Text('My Booking'),
             onTap: () {
-              // Navigate langsung ke MyBookingsScreen tanpa parameter
               Navigator.push(
-              // TODO: Redirect to My Booking page when available.
-              Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const MyBookingsScreen(),
                 ),
-                MaterialPageRoute(builder: (context) => const MyHomePage()),
               );
             },
           ),
+          
+          const Divider(),
+          
           ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Logout'),
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Logout', style: TextStyle(color: Colors.red)),
             onTap: () async {
-              final request = context.read<CookieRequest>();
               try {
                 final response = await request.logout(
                   "${Config.localUrl}${Config.logoutEndpoint}",
                 );
-                
+
                 if (context.mounted) {
-                   String message = response["message"];
-                   if (request.loggedIn) {
-                      message = "Logout failed";
-                   } else {
-                      message = "Logout successful";
-                   }
-                   
-                   ScaffoldMessenger.of(context).showSnackBar(
-                     SnackBar(content: Text(message)),
-                   );
-                   
-                   Navigator.pushReplacement(
+                  String message = "Logout berhasil";
+                  
+                  if (request.loggedIn) {
+                    message = "Logout gagal";
+                  }
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(message),
+                      backgroundColor: request.loggedIn ? Colors.red : Colors.green,
+                    ),
+                  );
+
+                  Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (context) => const LoginPage()),
+                    (route) => false,
                   );
                 }
               } catch (e) {
-                 if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Logout failed: $e")),
-                    );
-                     Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const LoginPage()),
-                    );
-                 }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Error logout: $e")),
+                  );
+                  
+                  // Force logout even if error
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                    (route) => false,
+                  );
+                }
               }
             },
           ),
