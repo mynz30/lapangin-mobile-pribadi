@@ -4,6 +4,7 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:lapangin/authbooking/screens/register.dart';
 import 'package:lapangin/landing/screens/menu.dart';
+// import 'package:lapangin/landing/screens/menu_admin.dart'; // TODO: Import halaman admin setelah dibuat
 import 'package:lapangin/config.dart';
 
 class LoginPage extends StatefulWidget {
@@ -152,7 +153,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
 
-                // 
                 const SizedBox(height: 120),
 
                 // LOGIN BUTTON
@@ -226,15 +226,13 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-
   Future<void> _loginUser(CookieRequest request) async {
     setState(() => _isLoading = true);
 
     try {
       final response = await request.login(
-        // klo udah deploy di pws pake baseURL
         "${Config.localUrl}${Config.loginEndpoint}",
-        // "${Config.baseUrl}${Config.loginEndpoint}",
+        // "${Config.baseUrl}${Config.loginEndpoint}", // Uncomment untuk production
         {
           'username': _usernameController.text,
           'password': _passwordController.text,
@@ -243,15 +241,37 @@ class _LoginPageState extends State<LoginPage> {
 
       setState(() => _isLoading = false);
 
-      if (request.loggedIn && response['status'] == true) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => MyHomePage()),
-        );
+      print("=== 🔐 LOGIN RESPONSE DEBUG ===");
+      print("Response: $response");
+      print("Status: ${response['status']}");
+      print("Logged In: ${request.loggedIn}");
+      print("User Data: ${request.jsonData}");
+      print("================================");
 
+      if (request.loggedIn && response['status'] == true) {
+        // Ambil role dari response
+        final String? userRole = response['role'] ?? request.jsonData['role'];
+        final String username = response['username'] ?? _usernameController.text;
+
+        print("🎯 User Role: $userRole");
+        print("👤 Username: $username");
+
+        // Navigate berdasarkan role
+        if (userRole != null) {
+          _navigateBasedOnRole(userRole, username);
+        } else {
+          // Fallback jika role tidak ditemukan
+          print("⚠️ Role tidak ditemukan, navigate ke MyHomePage (default)");
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => MyHomePage()),
+          );
+        }
+
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Welcome, ${response['username']}!"),
+            content: Text("Welcome, $username!"),
             backgroundColor: Colors.green,
           ),
         );
@@ -260,8 +280,83 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       setState(() => _isLoading = false);
+      print("❌ Login Error: $e");
       _showErrorDialog("Cannot connect to server: $e");
     }
+  }
+
+  void _navigateBasedOnRole(String role, String username) {
+    print("🚀 Navigating based on role: $role");
+
+    if (role.toUpperCase() == 'PENYEWA') {
+      // Navigate ke halaman penyewa (user biasa)
+      print("✅ Navigate to MyHomePage (PENYEWA)");
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => MyHomePage()),
+      );
+    } else if (role.toUpperCase() == 'PEMILIK') {
+      // Navigate ke halaman admin/pemilik
+      print("✅ Navigate to MyHomePageAdmin (PEMILIK)");
+      
+      // TODO: Ganti ini dengan halaman admin yang sudah dibuat
+      // Navigator.pushReplacement(
+      //   context,
+      //   MaterialPageRoute(builder: (context) => MyHomePageAdmin()),
+      // );
+      
+      // SEMENTARA: Tampilkan dialog placeholder
+      _showAdminPagePlaceholder(username);
+    } else {
+      // Fallback untuk role yang tidak dikenali
+      print("⚠️ Unknown role: $role, navigate ke MyHomePage");
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => MyHomePage()),
+      );
+    }
+  }
+
+  // TODO: Hapus fungsi ini setelah MyHomePageAdmin dibuat
+  void _showAdminPagePlaceholder(String username) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          "Admin Page",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Welcome, $username!"),
+            const SizedBox(height: 8),
+            const Text("Role: PEMILIK (Admin)"),
+            const SizedBox(height: 16),
+            const Text(
+              "Halaman admin belum tersedia.\nSementara akan diarahkan ke halaman user.",
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => MyHomePage()),
+              );
+            },
+            child: const Text("OK"),
+          )
+        ],
+      ),
+    );
   }
 
   void _showErrorDialog(String message) {

@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import '../models/booking_models.dart';
 import '../services/booking_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:lapangin/landing/screens/menu.dart';
+import 'package:lapangin/booking/screens/my_bookings_screen.dart';
 
 class PaymentDetailScreen extends StatefulWidget {
   final int bookingId;
@@ -31,6 +33,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   String? _errorMessage;
   
   Timer? _countdownTimer;
+  Timer? _pollingTimer; // Tambahkan timer untuk polling
   int _remainingSeconds = 0;
 
   @override
@@ -42,6 +45,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _pollingTimer?.cancel(); // Jangan lupa cancel polling
     super.dispose();
   }
 
@@ -81,6 +85,13 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
         if (booking.isPending && booking.timeRemainingSeconds != null) {
           _remainingSeconds = booking.timeRemainingSeconds!;
           _startCountdown();
+          _startPolling(); // Mulai polling status
+        } else if (booking.isPaid) {
+          // Jika sudah PAID, langsung navigate ke My Bookings
+          _navigateToMyBookings();
+        } else if (booking.isCancelled) {
+          // Jika sudah CANCELLED, langsung navigate ke Menu
+          _navigateToMenu();
         }
       });
     } catch (e) {
@@ -103,6 +114,96 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
         _showTimeoutDialog();
       }
     });
+  }
+
+  void _startPolling() {
+    // Polling setiap 3 detik untuk cek status booking
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      try {
+        final request = context.read<CookieRequest>();
+        final booking = await BookingService.getBookingDetailWithRequest(
+          request,
+          widget.bookingId,
+        );
+
+        print("=== Polling Status ===");
+        print("Current status: ${booking.statusPembayaran}");
+
+        if (booking.isPaid) {
+          // Status berubah jadi BOOKED (di-ACC oleh pemilik)
+          timer.cancel();
+          _countdownTimer?.cancel();
+          _navigateToMyBookings();
+        } else if (booking.isCancelled) {
+          // Status berubah jadi CANCELLED (ditolak oleh pemilik)
+          timer.cancel();
+          _countdownTimer?.cancel();
+          _navigateToMenu();
+        }
+      } catch (e) {
+        print("Polling error: $e");
+      }
+    });
+  }
+
+  void _navigateToMyBookings() {
+    // Tampilkan dialog sukses
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('✅ Pembayaran Dikonfirmasi!'),
+        content: const Text(
+          'Pembayaran Anda telah dikonfirmasi oleh pemilik lapangan. Booking Anda sudah berhasil!',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              // Navigate ke My Bookings SCREEN langsung
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MyBookingsScreen(), // <-- Langsung ke MyBookingsScreen
+                ),
+              );
+            },
+            child: const Text('Lihat Pesanan Saya'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToMenu() {
+    // Tampilkan dialog ditolak
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('❌ Booking Ditolak'),
+        content: const Text(
+          'Maaf, booking Anda ditolak oleh pemilik lapangan. Silakan pilih slot lain atau lapangan lain.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              
+              // Navigasi langsung tanpa route name
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MyHomePage(), // Langsung panggil widget
+                ),
+                (route) => false,
+              );
+            },
+            child: const Text('Kembali ke Beranda'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showTimeoutDialog() {
@@ -554,50 +655,76 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     );
   }
 
-  Widget _buildActionButtons() {
-    return Column(
-      children: [
-        ElevatedButton(
+Widget _buildActionButtons() {
+  return Column(
+    children: [
+      // Tombol Utama (Hijau)
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
           onPressed: _confirmPayment,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFA7BF6E),
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            backgroundColor: const Color(0xFF6B8E23), // Hijau lebih gelap
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 4,
+            shadowColor: const Color(0xFF6B8E23).withOpacity(0.3),
+            textStyle: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
             ),
           ),
-          child: const Text(
-            'Konfirmasi Pembayaran',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.message, size: 22),
+              SizedBox(width: 10),
+              Text('Konfirmasi Pembayaran'),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
-        
-        ElevatedButton(
+      ),
+      
+      const SizedBox(height: 16),
+      
+      // Tombol Sekunder (Outlined)
+      SizedBox(
+        width: double.infinity,
+        child: OutlinedButton(
           onPressed: () => Navigator.pop(context),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey.shade800,
-            padding: const EdgeInsets.symmetric(vertical: 16),
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(
+              color: Color(0xFF6B8E23),
+              width: 2,
+            ),
+            foregroundColor: const Color(0xFF6B8E23),
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
             ),
           ),
-          child: const Text(
-            'Kembali ke Daftar Lapangan',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.arrow_back, size: 22),
+              SizedBox(width: 10),
+              Text('Kembali ke Daftar Lapangan'),
+            ],
           ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   Widget _buildWarningText() {
     return const Text(

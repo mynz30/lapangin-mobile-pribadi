@@ -340,17 +340,19 @@ String _getShortDayName(DateTime date) {
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.network(
-            _lapangan?.fotoUtama ?? "https://via.placeholder.com/400x300?text=No+Image",
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                color: Colors.grey.shade300,
-                child: const Icon(Icons.image, size: 64, color: Colors.white),
-              );
-            },
-          ),
-        ),
+  child: Image.network(
+    (_lapangan?.fotoUtama?.isNotEmpty ?? false)
+        ? "${Config.localUrl}/booking/proxy-image/?url=${Uri.encodeComponent(_lapangan!.fotoUtama!)}"  // ✅ /booking/proxy-image/
+        : "",
+    fit: BoxFit.cover,
+    errorBuilder: (context, error, stackTrace) {
+      return Container(
+        color: Colors.grey.shade300,
+        child: const Icon(Icons.image_not_supported, size: 64, color: Colors.grey),
+      );
+    },
+  ),
+),
         
         Positioned.fill(
           child: Container(
@@ -381,15 +383,17 @@ String _getShortDayName(DateTime date) {
                 fit: StackFit.expand,
                 children: [
                   Image.network(
-                    _lapangan?.fotoUtama ?? "https://via.placeholder.com/400x300?text=No+Image",
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey.shade300,
-                        child: const Icon(Icons.image, size: 64, color: Colors.white),
-                      );
-                    },
-                  ),
+  (_lapangan?.fotoUtama?.isNotEmpty ?? false)
+      ? "${Config.localUrl}/booking/proxy-image/?url=${Uri.encodeComponent(_lapangan!.fotoUtama!)}"  // ✅ /booking/proxy-image/
+      : "",
+  fit: BoxFit.cover,
+  errorBuilder: (context, error, stackTrace) {
+    return Container(
+      color: Colors.grey.shade300,
+      child: const Icon(Icons.image_not_supported, size: 64, color: Colors.grey),
+    );
+  },
+),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -461,26 +465,30 @@ String _getShortDayName(DateTime date) {
             ),
           ),
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.white,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Pilih tanggal booking',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
+          InkWell(
+            onTap: _showDatePicker,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.white,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      DateFormat('dd/MM/yyyy').format(_selectedDate),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-                Icon(Icons.calendar_today, size: 20, color: Colors.grey.shade500),
-              ],
+                  Icon(Icons.calendar_today, size: 20, color: Colors.grey.shade500),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -495,6 +503,48 @@ String _getShortDayName(DateTime date) {
         ],
       ),
     );
+  }
+
+  Future<void> _showDatePicker() async {
+    final DateTime now = DateTime.now();
+    final DateTime firstDate = now;
+    final DateTime lastDate = now.add(const Duration(days: 90));
+
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF6B7A3E),
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF6B7A3E),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedDate != null && pickedDate != _selectedDate) {
+      print("📅 Date picked: ${DateFormat('yyyy-MM-dd').format(pickedDate)}");
+      
+      setState(() {
+        _selectedDate = pickedDate;
+        _selectedSlotId = null;
+      });
+
+      // Reload data dengan tanggal baru
+      await _loadData();
+    }
   }
 
 Widget _buildDatePicker() {

@@ -1,3 +1,4 @@
+// lib/authbooking/models/user_profile.dart
 class UserProfile {
   final String username;
   final String role;
