@@ -1,4 +1,4 @@
-// lib/admin-dashboard/screens/add_lapangan_screen.dart - UPDATED VERSION
+// lib/admin-dashboard/screens/add_lapangan_screen.dart - FIXED VERSION
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -58,8 +58,8 @@ class _AddLapanganScreenState extends State<AddLapanganScreen> {
       final file = File(pickedFile.path);
       final fileSize = await file.length();
       
-      // Check file size (max 5MB)
-      if (fileSize > Config.maxImageSizeBytes) {
+      // Check file size (max 5MB) - FIXED
+      if (fileSize > 5 * 1024 * 1024) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
