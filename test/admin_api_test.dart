@@ -1,6 +1,6 @@
 // test/admin_api_test.dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lapangin/admin-dashboard/services/api_service.dart';
+import 'package:lapangin_mobile/admin-dashboard/services/api_service.dart';
 
 void main() {
   group('Admin API Tests', () {
