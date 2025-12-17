@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:lapangin/admin-dashboard/services/lapangan_service.dart';
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/admin-dashboard/services/lapangan_service.dart';
+import 'package:lapangin_mobile/config.dart';
 
 class EditLapanganScreen extends StatefulWidget {
   final int lapanganId;

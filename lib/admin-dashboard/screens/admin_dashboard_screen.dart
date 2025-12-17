@@ -1,7 +1,7 @@
 // lib/admin-dashboard/screens/admin_dashboard_screen.dart - FIXED VERSION
 import 'package:flutter/material.dart';
-import 'package:lapangin/admin-dashboard/services/dashboard_service.dart';
-import 'package:lapangin/authbooking/screens/login.dart';
+import 'package:lapangin_mobile/admin-dashboard/services/dashboard_service.dart';
+import 'package:lapangin_mobile/authbooking/screens/login.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'booking_pending_screen.dart';

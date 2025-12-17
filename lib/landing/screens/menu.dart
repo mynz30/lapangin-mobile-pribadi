@@ -1,12 +1,12 @@
 // lib/landing/screens/menu.dart - FIXED VERSION
 import 'package:flutter/material.dart';
-import 'package:lapangin/landing/widgets/left_drawer.dart'; 
-import 'package:lapangin/landing/widgets/card_lapangan.dart'; 
-import 'package:lapangin/landing/models/lapangan_entry.dart'; 
+import 'package:lapangin_mobile/landing/widgets/left_drawer.dart'; 
+import 'package:lapangin_mobile/landing/widgets/card_lapangan.dart'; 
+import 'package:lapangin_mobile/landing/models/lapangan_entry.dart'; 
 import 'package:pbp_django_auth/pbp_django_auth.dart'; 
 import 'package:provider/provider.dart';
-import 'package:lapangin/booking/screens/booking_screen.dart';
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/booking/screens/booking_screen.dart';
+import 'package:lapangin_mobile/config.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -104,16 +104,20 @@ class _MyHomePageState extends State<MyHomePage> {
           String imageUrl = item['image'] ?? "";
           
           if (id != null && name != null && typeString != null) { 
-            fetchedLapangans.add(LapanganEntry(
-              id: id,
-              name: name,
-              type: typeValues.map[typeString]!,
-              location: location ?? "N/A",
-              price: price ?? 0,
-              rating: (rating is num) ? rating.toDouble() : 0.0,
-              reviewCount: reviewCount ?? 0,
-              image: imageUrl, 
-            ));
+            // ✅ FIX: Gunakan kondisional untuk handle null dari typeValues.map
+            final fieldType = typeValues.map[typeString];
+            if (fieldType != null) {
+              fetchedLapangans.add(LapanganEntry(
+                id: id,
+                name: name,
+                type: fieldType,  // Sudah pasti tidak null
+                location: location ?? "N/A",
+                price: price ?? 0,
+                rating: (rating is num) ? rating.toDouble() : 0.0,
+                reviewCount: reviewCount ?? 0,
+                image: imageUrl, 
+              ));
+            }
           }
         }
 
@@ -294,14 +298,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
   String _getTypeLabel() {
     if (_selectedType == null) return "Jenis Lapangan";
-    switch (_selectedType!) {
-      case FieldType.FUTSAL:
-        return "Futsal";
-      case FieldType.BASKET:
-        return "Basket";
-      case FieldType.BULUTANGKIS:
-        return "Bulutangkis";
-    }
+    
+    // ✅ FIX: Gunakan if-else biasa atau return langsung
+    if (_selectedType == FieldType.FUTSAL) return "Futsal";
+    if (_selectedType == FieldType.BASKET) return "Basket";
+    if (_selectedType == FieldType.BULUTANGKIS) return "Bulutangkis";
+    
+    return "Jenis Lapangan"; // fallback
   }
 
   String _getRatingLabel() {

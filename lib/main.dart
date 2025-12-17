@@ -4,19 +4,19 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 
 // Auth & Booking
-import 'package:lapangin/authbooking/screens/login.dart';
-import 'package:lapangin/landing/screens/menu.dart';
+import 'package:lapangin_mobile/authbooking/screens/login.dart';
+import 'package:lapangin_mobile/landing/screens/menu.dart';
 
 // Admin Dashboard
-import 'package:lapangin/admin-dashboard/screens/admin_dashboard_screen.dart';
-import 'package:lapangin/admin-dashboard/screens/booking_pending_screen.dart';
-import 'package:lapangin/admin-dashboard/screens/lapangan_list_screen.dart';
+import 'package:lapangin_mobile/admin-dashboard/screens/admin_dashboard_screen.dart';
+import 'package:lapangin_mobile/admin-dashboard/screens/booking_pending_screen.dart';
+import 'package:lapangin_mobile/admin-dashboard/screens/lapangan_list_screen.dart';
 
 // Community
-import 'package:lapangin/community/screens/community_page.dart';
+import 'package:lapangin_mobile/community/screens/community_page.dart';
 
 // Booking
-import 'package:lapangin/booking/screens/my_bookings_screen.dart';
+import 'package:lapangin_mobile/booking/screens/my_bookings_screen.dart';
 
 void main() {
   runApp(const MyApp());

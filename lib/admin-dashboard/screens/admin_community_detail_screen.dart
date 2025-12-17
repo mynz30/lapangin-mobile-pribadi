@@ -1,7 +1,7 @@
 // lib/admin-dashboard/screens/admin_community_detail_screen.dart
 import 'package:flutter/material.dart';
-import 'package:lapangin/admin-dashboard/services/community_service.dart';
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/admin-dashboard/services/community_service.dart';
+import 'package:lapangin_mobile/config.dart';
 
 class AdminCommunityDetailScreen extends StatefulWidget {
   final int communityId;

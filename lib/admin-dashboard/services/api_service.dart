@@ -1,7 +1,7 @@
 // lib/admin-dashboard/services/api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/config.dart';
 
 class AdminApiService {
   static String get baseUrl => Config.baseUrl;

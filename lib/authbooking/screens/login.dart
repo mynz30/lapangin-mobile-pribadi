@@ -2,10 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:lapangin/authbooking/screens/register.dart';
-import 'package:lapangin/landing/screens/menu.dart';
-import 'package:lapangin/admin-dashboard/screens/admin_dashboard_screen.dart';
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/authbooking/screens/register.dart';
+import 'package:lapangin_mobile/landing/screens/menu.dart';
+import 'package:lapangin_mobile/admin-dashboard/screens/admin_dashboard_screen.dart';
+import 'package:lapangin_mobile/config.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

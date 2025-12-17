@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lapangin/admin-dashboard/services/booking_service.dart';
+import 'package:lapangin_mobile/admin-dashboard/services/booking_service.dart';
 import 'add_lapangan_screen.dart';
 
 class LapanganListScreen extends StatefulWidget {

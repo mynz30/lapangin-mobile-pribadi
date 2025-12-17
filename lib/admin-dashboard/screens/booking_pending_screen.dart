@@ -1,6 +1,6 @@
 // lib/admin-dashboard/screens/booking_pending_screen.dart
 import 'package:flutter/material.dart';
-import 'package:lapangin/admin-dashboard/services/booking_service.dart';
+import 'package:lapangin_mobile/admin-dashboard/services/booking_service.dart';
 import 'package:intl/intl.dart';
 
 class BookingPendingScreen extends StatefulWidget {

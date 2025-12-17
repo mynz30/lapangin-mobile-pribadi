@@ -1,8 +1,8 @@
 // lib/admin-dashboard/screens/admin_community_list_screen.dart
 import 'package:flutter/material.dart';
-import 'package:lapangin/admin-dashboard/services/community_service.dart';
-import 'package:lapangin/admin-dashboard/screens/admin_community_detail_screen.dart';
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/admin-dashboard/services/community_service.dart';
+import 'package:lapangin_mobile/admin-dashboard/screens/admin_community_detail_screen.dart';
+import 'package:lapangin_mobile/config.dart';
 
 class AdminCommunityListScreen extends StatefulWidget {
   final String sessionCookie;

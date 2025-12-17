@@ -1,4 +1,6 @@
-// lib/config.dart - FIXED & COMPLETE VERSION
+// lib/config.dart - FIXED VERSION
+import 'package:flutter/material.dart';
+
 class Config {
   // ============================================
   // 🌐 BASE URL CONFIGURATION
@@ -7,12 +9,12 @@ class Config {
   // Production URL (PWS deployment)
   static const String baseUrl = "https://zibeon-jonriano-lapangin2.pbp.cs.ui.ac.id";
   
-  // Development URLs (pilih salah satu sesuai environment)
-  static const String localUrl = "http://localhost:8000";       // Chrome/Web
+  // Development URLs
+  static const String localUrl = "http://localhost:8000";
   // static const String localUrl = "http://10.0.2.2:8000";     // Android Emulator
   // static const String localUrl = "http://127.0.0.1:8000";    // iOS Simulator
   
-  // Active URL - GANTI INI SAAT DEPLOYMENT
+  // Active URL - Change for deployment
   static String get activeUrl => localUrl;  // Development
   // static String get activeUrl => baseUrl; // Production
   
@@ -41,49 +43,41 @@ class Config {
   // ============================================
   // 👨‍💼 ADMIN DASHBOARD ENDPOINTS
   // ============================================
-  
-  // Dashboard Stats
   static const String adminDashboardStatsEndpoint = "/dashboard/api/dashboard/stats/";
-  
-  // Booking Management
   static const String adminPendingBookingsEndpoint = "/dashboard/api/booking/pending/";
-  static const String adminApproveBookingEndpoint = "/dashboard/api/booking/"; // + {id}/approve/
-  static const String adminRejectBookingEndpoint = "/dashboard/api/booking/";  // + {id}/reject/
-  
-  // Lapangan Management
+  static const String adminApproveBookingEndpoint = "/dashboard/api/booking/";
+  static const String adminRejectBookingEndpoint = "/dashboard/api/booking/";
   static const String adminLapanganListEndpoint = "/dashboard/api/lapangan/list/";
   static const String adminLapanganCreateEndpoint = "/dashboard/api/lapangan/create/";
-  static const String adminLapanganDetailEndpoint = "/dashboard/api/lapangan/"; // + {id}/detail/
-  static const String adminLapanganUpdateEndpoint = "/dashboard/api/lapangan/"; // + {id}/update/
-  static const String adminLapanganDeleteEndpoint = "/dashboard/api/lapangan/"; // + {id}/delete/
-  
-  // Transaksi & Booking Sessions (Week 5)
+  static const String adminLapanganDetailEndpoint = "/dashboard/api/lapangan/";
+  static const String adminLapanganUpdateEndpoint = "/dashboard/api/lapangan/";
+  static const String adminLapanganDeleteEndpoint = "/dashboard/api/lapangan/";
   static const String adminTransaksiListEndpoint = "/dashboard/api/transaksi/list/";
   static const String adminBookingSessionsEndpoint = "/dashboard/api/booking-sessions/list/";
   static const String adminBookingSessionCreateEndpoint = "/dashboard/api/booking-sessions/create/";
-  static const String adminBookingSessionDeleteEndpoint = "/dashboard/api/booking-sessions/"; // + {id}/delete/
+  static const String adminBookingSessionDeleteEndpoint = "/dashboard/api/booking-sessions/";
   
   
   // ============================================
   // 👥 COMMUNITY ENDPOINTS
   // ============================================
   static const String communityListEndpoint = "/community/api/communities/";
-  static const String communityDetailEndpoint = "/community/api/"; // + {id}/
-  static const String communityJoinEndpoint = "/community/api/"; // + {id}/join-flutter/
-  static const String communityLeaveEndpoint = "/community/api/"; // + {id}/leave-flutter/
-  static const String communityPostsEndpoint = "/community/api/community/"; // + {id}/posts/
-  static const String communityCreatePostEndpoint = "/community/api/"; // + {id}/post/create-flutter/
-  static const String communityDeletePostEndpoint = "/community/api/post/"; // + {post_id}/delete-flutter/
-  static const String communityCreateCommentEndpoint = "/community/api/post/"; // + {post_id}/comment-flutter/
+  static const String communityDetailEndpoint = "/community/api/";
+  static const String communityJoinEndpoint = "/community/api/";
+  static const String communityLeaveEndpoint = "/community/api/";
+  static const String communityPostsEndpoint = "/community/api/community/";
+  static const String communityCreatePostEndpoint = "/community/api/";
+  static const String communityDeletePostEndpoint = "/community/api/post/";
+  static const String communityCreateCommentEndpoint = "/community/api/post/";
   
   
   // ============================================
   // ⭐ REVIEW ENDPOINTS
   // ============================================
-  static const String reviewListEndpoint = "/review/api/"; // + {field_id}
-  static const String reviewAddEndpoint = "/review/api/add/"; // + {field_id}/
-  static const String reviewEditEndpoint = "/review/edit/"; // + {review_id}/
-  static const String reviewDeleteEndpoint = "/review/delete/"; // + {review_id}/
+  static const String reviewListEndpoint = "/review/api/";
+  static const String reviewAddEndpoint = "/review/api/add/";
+  static const String reviewEditEndpoint = "/review/edit/";
+  static const String reviewDeleteEndpoint = "/review/delete/";
   
   
   // ============================================
@@ -106,7 +100,6 @@ class Config {
   }
   
   /// Build URL with path parameters
-  /// Example: buildUrl('/api/lapangan/{id}/', {'id': '123'})
   static String buildUrl(String endpoint, Map<String, String> params) {
     String url = endpoint;
     params.forEach((key, value) {
@@ -121,9 +114,9 @@ class Config {
   // ============================================
   
   // Colors
-  static const int primaryColorValue = 0xFFA7BF6E;
-  static const int secondaryColorValue = 0xFF8DA35D;
-  static const int accentColorValue = 0xFFC4DA6B;
+  static const Color primaryColor = Color(0xFFA7BF6E);
+  static const Color secondaryColor = Color(0xFF8DA35D);
+  static const Color accentColor = Color(0xFFC4DA6B);
   
   // Timeouts
   static const Duration apiTimeout = Duration(seconds: 30);
@@ -142,13 +135,13 @@ class Config {
   // ============================================
   
   static void printConfig() {
-    print('═══════════════════════════════════════');
-    print('📱 LAPANG.IN CONFIG');
-    print('═══════════════════════════════════════');
-    print('🌐 Active URL: $activeUrl');
-    print('🔐 Login: ${getUrl(loginEndpoint)}');
-    print('📅 Booking: ${getUrl(createBookingEndpoint)}');
-    print('👨‍💼 Admin: ${getUrl(adminDashboardStatsEndpoint)}');
-    print('═══════════════════════════════════════');
+    debugPrint('═══════════════════════════════════════');
+    debugPrint('📱 LAPANG.IN CONFIG');
+    debugPrint('═══════════════════════════════════════');
+    debugPrint('🌐 Active URL: $activeUrl');
+    debugPrint('🔐 Login: ${getUrl(loginEndpoint)}');
+    debugPrint('📅 Booking: ${getUrl(createBookingEndpoint)}');
+    debugPrint('👨‍💼 Admin: ${getUrl(adminDashboardStatsEndpoint)}');
+    debugPrint('═══════════════════════════════════════');
   }
 }

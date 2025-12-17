@@ -1,7 +1,7 @@
 // lib/admin-dashboard/services/community_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/config.dart';
 
 class AdminCommunityService {
   

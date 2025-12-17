@@ -1,8 +1,8 @@
 // lib/community/widgets/community_card.dart
 
 import 'package:flutter/material.dart';
-import 'package:lapangin/community/models/community_models.dart';
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/community/models/community_models.dart';
+import 'package:lapangin_mobile/config.dart';
 
 class CommunityCard extends StatelessWidget {
   final Community community;

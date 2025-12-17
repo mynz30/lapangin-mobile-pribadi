@@ -7,9 +7,9 @@ import 'package:provider/provider.dart';
 import '../models/booking_models.dart';
 import '../services/booking_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:lapangin/landing/screens/menu.dart';
-import 'package:lapangin/booking/screens/my_bookings_screen.dart';
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/landing/screens/menu.dart';
+import 'package:lapangin_mobile/booking/screens/my_bookings_screen.dart';
+import 'package:lapangin_mobile/config.dart';
 
 class PaymentDetailScreen extends StatefulWidget {
   final int bookingId;

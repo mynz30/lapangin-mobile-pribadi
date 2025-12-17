@@ -1,12 +1,12 @@
 // lib/landing/widgets/left_drawer.dart - FIXED VERSION
 import 'package:flutter/material.dart';
-import 'package:lapangin/authbooking/screens/login.dart';
-import 'package:lapangin/booking/screens/my_bookings_screen.dart';
-import 'package:lapangin/landing/screens/menu.dart';
-import 'package:lapangin/community/screens/community_page.dart';
+import 'package:lapangin_mobile/authbooking/screens/login.dart';
+import 'package:lapangin_mobile/booking/screens/my_bookings_screen.dart';
+import 'package:lapangin_mobile/landing/screens/menu.dart';
+import 'package:lapangin_mobile/community/screens/community_page.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:lapangin/config.dart';
+import 'package:lapangin_mobile/config.dart';
 
 const TextStyle darkHeadingStyle = TextStyle(
   color: Color(0xFF4D5833),
